@@ -1,3 +1,3 @@
-# aind-capsule-template
+# aind-vr-foraging-processing-nwb-packaging
 
-Basic structure of a capsule to be customized as needed.
+Capsule that processes primary data from vr-foraging task. PUT LINK TO TASK INFO
