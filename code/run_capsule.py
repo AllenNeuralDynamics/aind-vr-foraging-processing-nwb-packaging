@@ -1,3 +1,4 @@
+import json
 import logging
 from pathlib import Path
 
@@ -18,7 +19,7 @@ class VRForagingSettings(BaseSettings, cli_parse_args=True):
     """
 
     input_directory: Path = Field(
-        default=Path("/data/vr_forgaging_raw_nwb"),
+        default=Path("/data/vr_foraging_raw_nwb"),
         description="Directory where data is",
     )
     output_directory: Path = Field(
@@ -40,16 +41,22 @@ if __name__ == "__main__":
 
     logger.info(f"Found raw nwb at path {raw_nwb_path[0]}")
 
-    with NWBZarrIO(raw_nwb_path[0].as_posix(), "r") as io:
-        nwb = io.read()
+    source_io = NWBZarrIO(raw_nwb_path[0].as_posix(), "r")
+    nwb = source_io.read()
 
     event_timeseries_classification_dict = utils.get_event_timeseries_classifications(
         utils.VR_FORAGING_MAPPING, nwb
     )
-    event_table_dict = {"timestamp": [], "event_name": [], "event_data": []}
+    event_table_dict = {
+        "timestamp": [],
+        "event_name": [],
+        "processed_event_data": [],
+        "raw_event_data": [],
+    }
     if "behavior" not in nwb.processing:
         processing_module = ProcessingModule(
-            name="behavior", description="behavioral timeseries data"
+            name="behavior",
+            description="behavioral timeseries data for VR Foraging task",
         )
     else:
         processing_module = nwb.processing["behavior"]
@@ -62,9 +69,17 @@ if __name__ == "__main__":
             if not is_event:  # classified as event, skip timeseries
                 logger.info(f"Processing timeseries {column} from device {key}")
                 timestamps = nwb.acquisition[key][:]["Time"].to_numpy()
-                data = nwb.acquisition[key][:][item[0]].to_numpy()
+
+                if column == "Encoder":
+                    data = utils.get_processed_encoder(nwb)[
+                        "filtered_velocity"
+                    ].to_numpy()
+                elif column == "RawVoltage":
+                    data = utils.get_breathing_from_sniff_detector(nwb)
+                else:
+                    data = nwb.acquisition[key][:][column].to_numpy()
                 ts = TimeSeries(
-                    name=f"{key}.{item[0]}", data=data, timestamps=timestamps, unit="V"
+                    name=f"{key}.{column}", data=data, timestamps=timestamps, unit="V"
                 )
 
                 processing_module.add(ts)
@@ -73,7 +88,20 @@ if __name__ == "__main__":
                 data = nwb.acquisition[key][:]
                 event_table_dict["timestamp"].extend(data["Time"].tolist())
                 event_table_dict["event_name"].extend([key for i in range(len(data))])
-                event_table_dict["event_data"].extend(data[item[0]].tolist())
+                event_table_dict["processed_event_data"].extend(data[column].tolist())
+                event_table_dict["raw_event_data"].extend(
+                    ["" for i in range(len(data))]
+                )
+
+    software_event_keys = [
+        key for key in list(nwb.acquisition.keys()) if "SoftwareEvents" in key
+    ]
+    for software_event in software_event_keys:
+        data = nwb.acquisition[software_event][:]
+        event_table_dict["timestamp"].extend(data["timestamp"].tolist())
+        event_table_dict["event_name"].extend(data["name"].tolist())
+        event_table_dict["raw_event_data"].extend(data["data"].tolist())
+        event_table_dict["processed_event_data"].extend(["" for i in range(len(data))])
 
     event_table = EventsTable.from_dataframe(
         pd.DataFrame(event_table_dict),
@@ -81,4 +109,14 @@ if __name__ == "__main__":
         table_description="Events for VR Foraging task",
     )
     nwb.add_processing_module(processing_module)
-    nwb.add_event_table(event_table)
+    nwb.add_events_table(event_table)
+
+    nwb_output_path = (
+        settings.output_directory / f"{raw_nwb_path[0].stem}_processed"
+    ).as_posix()
+    logger.info(
+        f"Finished packaging processed timeseries and events. Writing to disk now at path {nwb_output_path}"
+    )
+
+    with NWBZarrIO(nwb_output_path, "w") as io:
+        io.export(src_io=source_io, nwbfile=nwb, write_args=dict(link_data=False))

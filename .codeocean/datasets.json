@@ -2,8 +2,8 @@
 	"version": 1,
 	"attached_datasets": [
 		{
-			"id": "a35bd8b3-85fb-4b7d-9a54-f905b832635b",
-			"mount": "vr_forgaging_raw_nwb"
+			"id": "7f0012b3-d698-4c77-970a-3687b7c2b9ed",
+			"mount": "vr_foraging_raw_nwb"
 		}
 	]
 }
