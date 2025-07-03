@@ -120,3 +120,4 @@ if __name__ == "__main__":
 
     with NWBZarrIO(nwb_output_path, "w") as io:
         io.export(src_io=source_io, nwbfile=nwb, write_args=dict(link_data=False))
+    logger.info("Successfully wrote processed NWB")

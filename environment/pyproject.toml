@@ -1,0 +1,19 @@
+[project]
+name = "aind-vr-foraging-processing-nwb-packaging"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "hdmf-zarr",
+    "matplotlib",
+    "ndx-events",
+    "numpy",
+    "pandas",
+    "pydantic-settings>=2.10.1",
+    "pynwb",
+    "scipy",
+]
+
+[tool.uv.sources]
+ndx-events = { git = "https://github.com/rly/ndx-events.git"}

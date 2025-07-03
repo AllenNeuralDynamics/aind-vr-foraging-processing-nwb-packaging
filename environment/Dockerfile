@@ -14,13 +14,10 @@ RUN apt-get update \
         libglib2.0-0=2.72.4-0ubuntu2.5 \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip install -U --no-cache-dir \
-    hdmf-zarr==0.11.1 \
-    matplotlib==3.9.4 \
-    numpy==2.0.2 \
-    pandas==2.3.0 \
-    scipy==1.13.1 \
-    -e git+https://github.com/rly/ndx-events.git@0d4e8efdcf1ab2eb9da9ca078b4522fcb82fa8a6#egg=ndx-events
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/root/.local/bin:$PATH"
+COPY ./pyproject.toml ./uv.lock ./
+RUN uv sync 
 
 COPY postInstall /
 RUN /postInstall
