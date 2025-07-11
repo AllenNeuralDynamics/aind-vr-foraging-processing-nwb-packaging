@@ -1,4 +1,5 @@
 import json
+import logging
 
 import numpy as np
 import pandas as pd
@@ -7,47 +8,53 @@ from ndx_events import EventsTable, MeaningsTable
 from packaging.version import Version
 from scipy.signal import filtfilt, firwin
 
-# TODO: get this from aind instrument/rig.json
+
+logger = logging.getLogger(__name__)
+
+# TODO: this a mapping that Tiffany provided. get this from aind instrument/rig.json
 VR_FORAGING_MAPPING = {
-    "Behavior.HarpBehavior.PwmStart": ["PwmDO2"],  # EVENT
-    "Behavior.HarpBehavior.PwmStop": ["PwmDO2"],  # EVENT
-    "Behavior.HarpBehavior.PulseSupplyPort0": ["PulseSupplyPort0"],  # EVENT
-    "Behavior.HarpOlfactometer.OdorValveState": ["Valve0", "Valve1", "Valve2"],  # EVENT
-    "Behavior.HarpOlfactometer.EndValveState": ["EndValve0"],  # EVENT
-    "Behavior.HarpLickometer.LickState": ["Channel0"],  # EVENT
-    "Behavior.HarpBehavior.DigitalInputState": ["DIPort0"],  # CONTINUOUS
-    "Behavior.HarpOlfactometer.Channel0ActualFlow": [
+    "Behavior.HarpBehavior.PwmStart": (["PwmDO2"], "sound_onset", "Hardware sound onset"),  # EVENT
+    "Behavior.HarpBehavior.PwmStop": (["PwmDO2"], "sound_offset", "Hardware sound offset"),  # EVENT
+    "Behavior.HarpBehavior.PulseSupplyPort0": (["PulseSupplyPort0"], "water_onset", "Hardware water onset"),  # EVENT
+    "Behavior.HarpOlfactometer.OdorValveState": (["Valve0", "Valve1", "Valve2"], 
+                                                    "odor_line_load", 
+                                                    "Loading of odor to line. Doesn’t mean odor is presented to the mouse but needs to happen before EndValve trigger and defines what odor is being presented "),  # EVENT
+    "Behavior.HarpOlfactometer.EndValveState": (["EndValve0"], "Odor", "Odor onset (True) and Odor offset (False)"), # EVENT
+    "Behavior.HarpLickometer.LickState": (["Channel0"], "Lick_state", "Lick onset (True) and Lick offset (False)"),  # EVENT
+    "Behavior.HarpBehavior.DigitalInputState": (["DIPort0"], "Photodiode", "Screen synchronization photodiode"),  # CONTINUOUS
+    "Behavior.HarpOlfactometer.Channel0ActualFlow": ([
         "Channel0ActualFlow"
-    ],  # CONTINUOUS
-    "Behavior.HarpOlfactometer.Channel1ActualFlow": [
+    ], "Channel0ActualFlow", "Measure flow in channel 0"),  # CONTINUOUS
+    "Behavior.HarpOlfactometer.Channel1ActualFlow": ([
         "Channel1ActualFlow"
-    ],  # CONTINUOUS
-    "Behavior.HarpOlfactometer.Channel2ActualFlow": [
+    ], "Channel1ActualFlow", "Measure flow in channel 1"),  # CONTINUOUS
+    "Behavior.HarpOlfactometer.Channel2ActualFlow": ([
         "Channel2ActualFlow"
-    ],  # CONTINUOUS
-    "Behavior.HarpOlfactometer.Channel3ActualFlow": [
+    ], "Channel2ActualFlow", "Measure flow in channel 2"),  # CONTINUOUS
+    "Behavior.HarpOlfactometer.Channel3ActualFlow": ([
         "Channel3ActualFlow"
-    ],  # CONTINUOUS
-    "Behavior.HarpOlfactometer.Channel4ActualFlow": [
+    ], "Channel3ActualFlow", "Measure flow in channel 3"),  # CONTINUOUS
+    "Behavior.HarpOlfactometer.Channel4ActualFlow": ([
         "Channel4ActualFlow"
-    ],  # CONTINUOUS
-    "Behavior.HarpSniffDetector.RawVoltage": ["RawVoltage"],  # CONTINUOUS
-    "Behavior.HarpStepperDriver.AccumulatedSteps": [
+    ], "Channel4ActualFlow", "Measure flow in channel 4"),  # CONTINUOUS
+    "Behavior.HarpSniffDetector.RawVoltage": (["RawVoltage"], "Breathing", "Breathing signal"),  # CONTINUOUS
+    "Behavior.HarpStepperDriver.AccumulatedSteps": ([
         "Motor0, Motor1, Motor2, Motor3"
-    ],  # CONTINUOUS
-    "Behavior.HarpTreadmill.SensorData": [
+    ], "MotorPositions", "The position of x, y1, y2, and z  of the lickspout and oder tube"),  # CONTINUOUS
+    "Behavior.HarpTreadmill.SensorData": ([
         "Encoder",
         "Torque",
         "TorqueLoadCurrent",
-    ],  # CONTINUOUS
-    "Behavior.HarpEnvironmentSensor.SensorData": [
+    ], "Treadmill", "Continuous signal from treadmill"),  # CONTINUOUS
+    "Behavior.HarpEnvironmentSensor.SensorData": ([
         "Pressure",
         "Temperature",
         "Humidity",
-    ],  # CONTINUOUS
+    ], "Environment", "Continuous signal from environment sensor")  # CONTINUOUS
 }
 
 
+# ported from Tiffany's processing code
 def get_breathing_from_sniff_detector(nwb: pynwb.NWBFile) -> np.ndarray:
     """
     Gets the breating from the sniff detector raw data
@@ -73,6 +80,7 @@ def get_breathing_from_sniff_detector(nwb: pynwb.NWBFile) -> np.ndarray:
         ].to_numpy()
 
 
+# ported from Tiffany's processing code
 def fir_filter(
     data: pd.DataFrame, col: str, cutoff_hz: float, num_taps=61, nyq_rate=1000 / 2.0
 ) -> pd.DataFrame:
@@ -113,6 +121,7 @@ def fir_filter(
     return data
 
 
+# ported from Tiffany's processing code
 def get_processed_encoder(nwb: pynwb.NWBFile, parser: str = "filter") -> pd.DataFrame:
     """
     Processes the raw encoder data to return filtered velocity
@@ -236,20 +245,25 @@ def get_event_timeseries_classifications(
 
     register_event_timseries_classification = {}
 
-    for device, registers in device_mapping.items():
+    for device, contents in device_mapping.items():
+        registers = contents[0]
+        name = contents[1]
+        description = contents[2]
+
         for register in registers:
             if device not in nwb.acquisition.keys():
+                logger.warning(f"No {device} found in acquisition field of nwb.")
                 continue
 
             data = nwb.acquisition[device][:]["Time"]
             is_this_event = is_event(data)
             if device in register_event_timseries_classification:
                 register_event_timseries_classification[device].append(
-                    (register, is_this_event)
+                    (register, is_this_event, name, description)
                 )
             else:
                 register_event_timseries_classification[device] = [
-                    (register, is_this_event)
+                    (register, is_this_event, name, description)
                 ]
 
     return register_event_timseries_classification
@@ -277,4 +291,4 @@ def is_event(times: np.ndarray, threshold: float = 1) -> bool:
     deltas = np.diff(times)
     mean_delta = np.mean(deltas)
 
-    return bool(mean_delta > threshold), mean_delta
+    return bool(mean_delta > threshold)

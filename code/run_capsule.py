@@ -53,6 +53,11 @@ if __name__ == "__main__":
         "processed_event_data": [],
         "raw_event_data": [],
     }
+    meanings_table_dict = {
+        "value": [],
+        "meaning": []
+    }
+
     if "behavior" not in nwb.processing:
         processing_module = ProcessingModule(
             name="behavior",
@@ -63,10 +68,18 @@ if __name__ == "__main__":
 
     for key, items in event_timeseries_classification_dict.items():
         for item in items:
-            is_event = item[1][0]
+            is_event = item[1]
             column = item[0]
+            name = item[2]
+            description = item[3]
 
-            if not is_event:  # classified as event, skip timeseries
+            name_for_nwb = None
+            if name != column:
+                name_for_nwb = f"{name}_{column}"
+            else:
+                name_for_nwb = name
+
+            if not is_event:  # classified as event
                 logger.info(f"Processing timeseries {column} from device {key}")
                 timestamps = nwb.acquisition[key][:]["Time"].to_numpy()
 
@@ -78,17 +91,23 @@ if __name__ == "__main__":
                     data = utils.get_breathing_from_sniff_detector(nwb)
                 else:
                     data = nwb.acquisition[key][:][column].to_numpy()
+
                 ts = TimeSeries(
-                    name=f"{key}.{column}", data=data, timestamps=timestamps, unit="V"
+                    name=name_for_nwb, data=data, timestamps=timestamps, unit="V", description=f"{name_for_nwb} - {description}"
                 )
 
                 processing_module.add(ts)
-            else:
+            else: # timeseries
                 logger.info(f"Processing event {column} from device {key}")
                 data = nwb.acquisition[key][:]
+                unique_values = data[column].unique()
+                for value in unique_values:
+                    meanings_table_dict["value"].append(f"{name_for_nwb} - {value}")
+                    meanings_table_dict["meaning"].append(f"{name_for_nwb} - {description}")
+
                 event_table_dict["timestamp"].extend(data["Time"].tolist())
-                event_table_dict["event_name"].extend([key for i in range(len(data))])
-                event_table_dict["processed_event_data"].extend(data[column].tolist())
+                event_table_dict["event_name"].extend([name_for_nwb for i in range(len(data))])
+                event_table_dict["processed_event_data"].extend([json.dumps(d) for d in data[column].tolist()])
                 event_table_dict["raw_event_data"].extend(
                     ["" for i in range(len(data))]
                 )
@@ -103,11 +122,17 @@ if __name__ == "__main__":
         event_table_dict["raw_event_data"].extend(data["data"].tolist())
         event_table_dict["processed_event_data"].extend(["" for i in range(len(data))])
 
+    meanings_table = MeaningsTable.from_dataframe(
+        pd.DataFrame(meanings_table_dict),
+        name="meanings",
+        table_description="Description of values in events table for VR Foraging task"
+    )
     event_table = EventsTable.from_dataframe(
         pd.DataFrame(event_table_dict),
         name="events",
         table_description="Events for VR Foraging task",
     )
+    event_table.add_meanings_tables(meanings_table)
     nwb.add_processing_module(processing_module)
     nwb.add_events_table(event_table)
 
