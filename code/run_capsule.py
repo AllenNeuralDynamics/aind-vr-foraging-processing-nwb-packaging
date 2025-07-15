@@ -5,7 +5,7 @@ from pathlib import Path
 import pandas as pd
 import utils
 from hdmf_zarr import NWBZarrIO
-from ndx_events import EventsTable, MeaningsTable, NdxEventsNWBFile
+from ndx_events import EventsTable, MeaningsTable
 from pydantic import Field
 from pydantic_settings import BaseSettings
 from pynwb.base import ProcessingModule, TimeSeries
@@ -44,8 +44,10 @@ if __name__ == "__main__":
     source_io = NWBZarrIO(raw_nwb_path[0].as_posix(), "r")
     nwb = source_io.read()
 
-    event_timeseries_classification_dict = utils.get_event_timeseries_classifications(
-        utils.VR_FORAGING_MAPPING, nwb
+    event_timeseries_classification_dict = (
+        utils.get_event_timeseries_classifications(
+            utils.VR_FORAGING_MAPPING, nwb
+        )
     )
     event_table_dict = {
         "timestamp": [],
@@ -53,10 +55,7 @@ if __name__ == "__main__":
         "processed_event_data": [],
         "raw_event_data": [],
     }
-    meanings_table_dict = {
-        "value": [],
-        "meaning": []
-    }
+    meanings_table_dict = {"value": [], "meaning": []}
 
     if "behavior" not in nwb.processing:
         processing_module = ProcessingModule(
@@ -79,8 +78,10 @@ if __name__ == "__main__":
             else:
                 name_for_nwb = name
 
-            if not is_event:  # classified as event
-                logger.info(f"Processing timeseries {column} from device {key}")
+            if not is_event:  # classified as timeseries
+                logger.info(
+                    f"Processing timeseries {column} from device {key}"
+                )
                 timestamps = nwb.acquisition[key][:]["Time"].to_numpy()
 
                 if column == "Encoder":
@@ -92,22 +93,35 @@ if __name__ == "__main__":
                 else:
                     data = nwb.acquisition[key][:][column].to_numpy()
 
+                # potentially change to tables for consistency
                 ts = TimeSeries(
-                    name=name_for_nwb, data=data, timestamps=timestamps, unit="V", description=f"{name_for_nwb} - {description}"
+                    name=name_for_nwb,
+                    data=data,
+                    timestamps=timestamps,
+                    unit="V",
+                    description=f"{name_for_nwb} - {description}",
                 )
 
                 processing_module.add(ts)
-            else: # timeseries
+            else:  # event
                 logger.info(f"Processing event {column} from device {key}")
                 data = nwb.acquisition[key][:]
                 unique_values = data[column].unique()
                 for value in unique_values:
-                    meanings_table_dict["value"].append(f"{name_for_nwb} - {value}")
-                    meanings_table_dict["meaning"].append(f"{name_for_nwb} - {description}")
+                    meanings_table_dict["value"].append(
+                        f"{name_for_nwb} - {value}"
+                    )
+                    meanings_table_dict["meaning"].append(
+                        f"{name_for_nwb} - {description}"
+                    )
 
                 event_table_dict["timestamp"].extend(data["Time"].tolist())
-                event_table_dict["event_name"].extend([name_for_nwb for i in range(len(data))])
-                event_table_dict["processed_event_data"].extend([json.dumps(d) for d in data[column].tolist()])
+                event_table_dict["event_name"].extend(
+                    [name_for_nwb for i in range(len(data))]
+                )
+                event_table_dict["processed_event_data"].extend(
+                    [json.dumps(d) for d in data[column].tolist()]
+                )
                 event_table_dict["raw_event_data"].extend(
                     ["" for i in range(len(data))]
                 )
@@ -120,12 +134,17 @@ if __name__ == "__main__":
         event_table_dict["timestamp"].extend(data["timestamp"].tolist())
         event_table_dict["event_name"].extend(data["name"].tolist())
         event_table_dict["raw_event_data"].extend(data["data"].tolist())
-        event_table_dict["processed_event_data"].extend(["" for i in range(len(data))])
+        event_table_dict["processed_event_data"].extend(
+            ["" for i in range(len(data))]
+        )
 
     meanings_table = MeaningsTable.from_dataframe(
         pd.DataFrame(meanings_table_dict),
         name="meanings",
-        table_description="Description of values in events table for VR Foraging task"
+        # probably better way, but violates flake8 if not like this
+        table_description=(
+            "Description of values in events table for VR Foraging task",
+        )[0]
     )
     event_table = EventsTable.from_dataframe(
         pd.DataFrame(event_table_dict),
@@ -137,12 +156,17 @@ if __name__ == "__main__":
     nwb.add_events_table(event_table)
 
     nwb_output_path = (
-        settings.output_directory / f"{raw_nwb_path[0].stem}_processed"
+        settings.output_directory / f"{raw_nwb_path[0].stem}-processed"
     ).as_posix()
     logger.info(
-        f"Finished packaging processed timeseries and events. Writing to disk now at path {nwb_output_path}"
+        "Finished packaging processed timeseries and events."
+    )
+    logger.info(
+        f"Writing to disk now at path {nwb_output_path}"
     )
 
     with NWBZarrIO(nwb_output_path, "w") as io:
-        io.export(src_io=source_io, nwbfile=nwb, write_args=dict(link_data=False))
+        io.export(
+            src_io=source_io, nwbfile=nwb, write_args=dict(link_data=False)
+        )
     logger.info("Successfully wrote processed NWB")
