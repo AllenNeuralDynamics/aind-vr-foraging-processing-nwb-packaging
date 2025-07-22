@@ -79,27 +79,24 @@ if __name__ == "__main__":
                 name_for_nwb = name
 
             if not is_event:  # classified as timeseries
+                if column != "Encoder":
+                    continue
+
                 logger.info(
                     f"Processing timeseries {column} from device {key}"
                 )
                 timestamps = nwb.acquisition[key][:]["Time"].to_numpy()
 
-                if column == "Encoder":
-                    data = utils.get_processed_encoder(nwb)[
-                        "filtered_velocity"
-                    ].to_numpy()
-                elif column == "RawVoltage":
-                    data = utils.get_breathing_from_sniff_detector(nwb)
-                else:
-                    data = nwb.acquisition[key][:][column].to_numpy()
+                data = utils.get_processed_encoder(nwb)[
+                    "filtered_velocity"
+                ].to_numpy()
 
-                # potentially change to tables for consistency
                 ts = TimeSeries(
                     name=name_for_nwb,
                     data=data,
                     timestamps=timestamps,
-                    unit="V",
-                    description=f"{name_for_nwb} - {description}",
+                    unit="s",
+                    description=f"{name_for_nwb} - {description} with a FIR filter applied",
                 )
 
                 processing_module.add(ts)
@@ -137,6 +134,7 @@ if __name__ == "__main__":
         event_table_dict["processed_event_data"].extend(
             ["" for i in range(len(data))]
         )
+
 
     meanings_table = MeaningsTable.from_dataframe(
         pd.DataFrame(meanings_table_dict),
