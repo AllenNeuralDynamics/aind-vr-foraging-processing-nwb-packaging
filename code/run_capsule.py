@@ -73,10 +73,10 @@ if __name__ == "__main__":
             description = item[3]
 
             name_for_nwb = None
-            if name != column:
-                name_for_nwb = f"{name}_{column}"
-            else:
-                name_for_nwb = name
+            # if name != column:
+            #     name_for_nwb = f"{name}_{column}"
+            # else:
+            name_for_nwb = name
 
             if not is_event:  # classified as timeseries
                 if column != "Encoder":
@@ -103,25 +103,30 @@ if __name__ == "__main__":
             else:  # event
                 logger.info(f"Processing event {column} from device {key}")
                 data = nwb.acquisition[key][:]
-                unique_values = data[column].unique()
-                for value in unique_values:
-                    meanings_table_dict["value"].append(
-                        f"{name_for_nwb} - {value}"
-                    )
-                    meanings_table_dict["meaning"].append(
-                        f"{name_for_nwb} - {description}"
-                    )
+                # Generate mask based on column type
+                if data[column].dtype == bool and name != "Lick" and name != "Odor":
+                    mask = data[column].tolist()
+                else:
+                    mask = [True] * len(data)
 
-                event_table_dict["timestamp"].extend(data["Time"].tolist())
-                event_table_dict["event_name"].extend(
-                    [name_for_nwb for i in range(len(data))]
-                )
+                # Filtered rows
+                filtered_rows = data[mask].reset_index(drop=True)
+                filtered_column_values = filtered_rows[column].tolist()
+
+                # Unique values for meanings
+                unique_values = pd.Series(filtered_column_values).unique()
+                for value in unique_values:
+                    if f"{name_for_nwb} - {value}" not in meanings_table_dict["value"]:
+                        meanings_table_dict["value"].append(f"{name_for_nwb} - {value}")
+                        meanings_table_dict["meaning"].append(description)
+
+                # Fill event table with filtered rows only
+                event_table_dict["timestamp"].extend(filtered_rows["Time"].tolist())
+                event_table_dict["event_name"].extend([name_for_nwb] * len(filtered_rows))
                 event_table_dict["processed_event_data"].extend(
-                    [json.dumps(d) for d in data[column].tolist()]
+                    [json.dumps(d) for d in filtered_column_values]
                 )
-                event_table_dict["raw_event_data"].extend(
-                    ["" for i in range(len(data))]
-                )
+                event_table_dict["raw_event_data"].extend([""] * len(filtered_rows))
 
     software_event_keys = [
         key for key in list(nwb.acquisition.keys()) if "SoftwareEvents" in key
@@ -129,7 +134,9 @@ if __name__ == "__main__":
     for software_event in software_event_keys:
         data = nwb.acquisition[software_event][:]
         event_table_dict["timestamp"].extend(data["timestamp"].tolist())
-        event_table_dict["event_name"].extend(data["name"].tolist())
+        event_table_dict["event_name"].extend(
+            name.split('.')[-1] for name in data["name"]
+        )
         event_table_dict["raw_event_data"].extend(data["data"].tolist())
         event_table_dict["processed_event_data"].extend(
             ["" for i in range(len(data))]

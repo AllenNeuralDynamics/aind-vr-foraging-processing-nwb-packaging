@@ -42,12 +42,12 @@ VR_FORAGING_MAPPING = {
     "Behavior.HarpOlfactometer.EndValveState": (
         ["EndValve0"],
         "Odor",
-        "Odor onset (True) and Odor offset (False)",
+        "Odor Onset (True). Odor Offset(False)",
     ),  # EVENT
     "Behavior.HarpLickometer.LickState": (
         ["Channel0"],
-        "Lick_state",
-        "Lick onset (True) and Lick offset (False)",
+        "Lick",
+        "Lick onset (True). Lick Offset(False)",
     ),  # EVENT
     "Behavior.HarpBehavior.DigitalInputState": (
         ["DIPort0"],
