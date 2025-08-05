@@ -109,6 +109,34 @@ VR_FORAGING_MAPPING = {
     ),  # CONTINUOUS
 }
 
+def normalize_to_json_string(x):
+    """
+    Normalizes input to a JSON-compatible string for NWB.
+
+    Parameters
+    ----------
+    x : Any
+        The input to normalize. Can be a dict, string, None, or other JSON-serializable types.
+
+    Returns
+    -------
+    str
+        A JSON-formatted string representing the input.
+    """
+    if isinstance(x, dict):
+        return json.dumps(x)  # serialize dict (handles nesting)
+    elif isinstance(x, str):
+        try:
+            json.loads(x)  # check if valid JSON string
+            return x  # already a valid JSON string
+        except json.JSONDecodeError:
+            # Not a valid JSON string, re-encode
+            return json.dumps(x)
+    elif x is None:
+        return "null"
+    else:
+        # fallback: try to serialize other types
+        return json.dumps(x)
 
 # ported from Tiffany's processing code
 def get_breathing_from_sniff_detector(nwb: pynwb.NWBFile) -> np.ndarray:

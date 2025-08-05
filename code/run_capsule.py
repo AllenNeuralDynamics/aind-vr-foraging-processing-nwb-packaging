@@ -52,8 +52,7 @@ if __name__ == "__main__":
     event_table_dict = {
         "timestamp": [],
         "event_name": [],
-        "processed_event_data": [],
-        "raw_event_data": [],
+        "event_data": [],
     }
     meanings_table_dict = {"value": [], "meaning": []}
 
@@ -79,7 +78,7 @@ if __name__ == "__main__":
             name_for_nwb = name
 
             if not is_event:  # classified as timeseries
-                if column != "Encoder":
+                if column != "Encoder": # only processing done on Encoder
                     continue
 
                 logger.info(
@@ -123,10 +122,9 @@ if __name__ == "__main__":
                 # Fill event table with filtered rows only
                 event_table_dict["timestamp"].extend(filtered_rows["Time"].tolist())
                 event_table_dict["event_name"].extend([name_for_nwb] * len(filtered_rows))
-                event_table_dict["processed_event_data"].extend(
+                event_table_dict["event_data"].extend(
                     [json.dumps(d) for d in filtered_column_values]
                 )
-                event_table_dict["raw_event_data"].extend([""] * len(filtered_rows))
 
     software_event_keys = [
         key for key in list(nwb.acquisition.keys()) if "SoftwareEvents" in key
@@ -137,10 +135,10 @@ if __name__ == "__main__":
         event_table_dict["event_name"].extend(
             name.split('.')[-1] for name in data["name"]
         )
-        event_table_dict["raw_event_data"].extend(data["data"].tolist())
-        event_table_dict["processed_event_data"].extend(
-            ["" for i in range(len(data))]
-        )
+        event_table_dict["event_data"].extend(data["data"].apply(utils.normalize_to_json_string).tolist())
+        for name in data["name"].unique():
+            meanings_table_dict["value"].append(f"{name.split('.')[-1]}")
+            meanings_table_dict["meaning"].append(nwb.acquisition[software_event].description)
 
 
     meanings_table = MeaningsTable.from_dataframe(
@@ -151,6 +149,11 @@ if __name__ == "__main__":
             "Description of values in events table for VR Foraging task",
         )[0]
     )
+    # sort by timestamps
+    sorted_indices = sorted(range(len(event_table_dict["timestamp"])), key=lambda i: event_table_dict["timestamp"][i])
+    # Apply the sort to all keys
+    event_table_dict = {k: [v[i] for i in sorted_indices] for k, v in event_table_dict.items()}
+
     event_table = EventsTable.from_dataframe(
         pd.DataFrame(event_table_dict),
         name="events",
