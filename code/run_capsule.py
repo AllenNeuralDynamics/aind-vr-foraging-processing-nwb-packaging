@@ -3,12 +3,13 @@ import logging
 from pathlib import Path
 
 import pandas as pd
-import utils
 from hdmf_zarr import NWBZarrIO
 from ndx_events import EventsTable, MeaningsTable
 from pydantic import Field
 from pydantic_settings import BaseSettings
 from pynwb.base import ProcessingModule, TimeSeries
+
+import utils
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +79,7 @@ if __name__ == "__main__":
             name_for_nwb = name
 
             if not is_event:  # classified as timeseries
-                if column != "Encoder": # only processing done on Encoder
+                if column != "Encoder":  # only processing done on Encoder
                     continue
 
                 logger.info(
@@ -95,7 +96,10 @@ if __name__ == "__main__":
                     data=data,
                     timestamps=timestamps,
                     unit="s",
-                    description=f"{name_for_nwb} - {description} with a FIR filter applied",
+                    description=(
+                        f"{name_for_nwb} - "
+                        f"{description} with a FIR filter applied"
+                    )[0],
                 )
 
                 processing_module.add(ts)
@@ -103,7 +107,11 @@ if __name__ == "__main__":
                 logger.info(f"Processing event {column} from device {key}")
                 data = nwb.acquisition[key][:]
                 # Generate mask based on column type
-                if data[column].dtype == bool and name != "Lick" and name != "Odor":
+                if (
+                    data[column].dtype == bool
+                    and name != "Lick"
+                    and name != "Odor"
+                ):
                     mask = data[column].tolist()
                 else:
                     mask = [True] * len(data)
@@ -115,13 +123,22 @@ if __name__ == "__main__":
                 # Unique values for meanings
                 unique_values = pd.Series(filtered_column_values).unique()
                 for value in unique_values:
-                    if f"{name_for_nwb} - {value}" not in meanings_table_dict["value"]:
-                        meanings_table_dict["value"].append(f"{name_for_nwb} - {value}")
+                    if (
+                        f"{name_for_nwb} - {value}"
+                        not in meanings_table_dict["value"]
+                    ):
+                        meanings_table_dict["value"].append(
+                            f"{name_for_nwb} - {value}"
+                        )
                         meanings_table_dict["meaning"].append(description)
 
                 # Fill event table with filtered rows only
-                event_table_dict["timestamp"].extend(filtered_rows["Time"].tolist())
-                event_table_dict["event_name"].extend([name_for_nwb] * len(filtered_rows))
+                event_table_dict["timestamp"].extend(
+                    filtered_rows["Time"].tolist()
+                )
+                event_table_dict["event_name"].extend(
+                    [name_for_nwb] * len(filtered_rows)
+                )
                 event_table_dict["event_data"].extend(
                     [json.dumps(d) for d in filtered_column_values]
                 )
@@ -133,13 +150,16 @@ if __name__ == "__main__":
         data = nwb.acquisition[software_event][:]
         event_table_dict["timestamp"].extend(data["timestamp"].tolist())
         event_table_dict["event_name"].extend(
-            name.split('.')[-1] for name in data["name"]
+            name.split(".")[-1] for name in data["name"]
         )
-        event_table_dict["event_data"].extend(data["data"].apply(utils.normalize_to_json_string).tolist())
+        event_table_dict["event_data"].extend(
+            data["data"].apply(utils.normalize_to_json_string).tolist()
+        )
         for name in data["name"].unique():
             meanings_table_dict["value"].append(f"{name.split('.')[-1]}")
-            meanings_table_dict["meaning"].append(nwb.acquisition[software_event].description)
-
+            meanings_table_dict["meaning"].append(
+                nwb.acquisition[software_event].description
+            )
 
     meanings_table = MeaningsTable.from_dataframe(
         pd.DataFrame(meanings_table_dict),
@@ -147,12 +167,17 @@ if __name__ == "__main__":
         # probably better way, but violates flake8 if not like this
         table_description=(
             "Description of values in events table for VR Foraging task",
-        )[0]
+        )[0],
     )
     # sort by timestamps
-    sorted_indices = sorted(range(len(event_table_dict["timestamp"])), key=lambda i: event_table_dict["timestamp"][i])
+    sorted_indices = sorted(
+        range(len(event_table_dict["timestamp"])),
+        key=lambda i: event_table_dict["timestamp"][i],
+    )
     # Apply the sort to all keys
-    event_table_dict = {k: [v[i] for i in sorted_indices] for k, v in event_table_dict.items()}
+    event_table_dict = {
+        k: [v[i] for i in sorted_indices] for k, v in event_table_dict.items()
+    }
 
     event_table = EventsTable.from_dataframe(
         pd.DataFrame(event_table_dict),
@@ -166,12 +191,8 @@ if __name__ == "__main__":
     nwb_output_path = (
         settings.output_directory / f"{raw_nwb_path[0].stem}-processed"
     ).as_posix()
-    logger.info(
-        "Finished packaging processed timeseries and events."
-    )
-    logger.info(
-        f"Writing to disk now at path {nwb_output_path}"
-    )
+    logger.info("Finished packaging processed timeseries and events.")
+    logger.info(f"Writing to disk now at path {nwb_output_path}")
 
     with NWBZarrIO(nwb_output_path, "w") as io:
         io.export(

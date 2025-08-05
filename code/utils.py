@@ -7,7 +7,6 @@ import pynwb
 from packaging.version import Version
 from scipy.signal import filtfilt, firwin
 
-
 logger = logging.getLogger(__name__)
 
 # this a mapping that Tiffany provided.
@@ -109,6 +108,7 @@ VR_FORAGING_MAPPING = {
     ),  # CONTINUOUS
 }
 
+
 def normalize_to_json_string(x):
     """
     Normalizes input to a JSON-compatible string for NWB.
@@ -116,7 +116,8 @@ def normalize_to_json_string(x):
     Parameters
     ----------
     x : Any
-        The input to normalize. Can be a dict, string, None, or other JSON-serializable types.
+        The input to normalize.
+        Can be a dict, string, None, or other JSON-serializable types.
 
     Returns
     -------
@@ -137,6 +138,7 @@ def normalize_to_json_string(x):
     else:
         # fallback: try to serialize other types
         return json.dumps(x)
+
 
 # ported from Tiffany's processing code
 def get_breathing_from_sniff_detector(nwb: pynwb.NWBFile) -> np.ndarray:
