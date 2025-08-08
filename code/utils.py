@@ -14,8 +14,8 @@ logger = logging.getLogger(__name__)
 VR_FORAGING_MAPPING = {
     "Behavior.HarpBehavior.PwmStart": (
         ["PwmDO2"],
-        "sound_onset",
-        "Hardware sound onset",
+        "sound",
+        "Sound delivered from hardware",
     ),  # EVENT
     "Behavior.HarpBehavior.PwmStop": (
         ["PwmDO2"],
@@ -24,8 +24,8 @@ VR_FORAGING_MAPPING = {
     ),  # EVENT
     "Behavior.HarpBehavior.PulseSupplyPort0": (
         ["PulseSupplyPort0"],
-        "water_onset",
-        "Hardware water onset",
+        "water",
+        "Water delivered from hardware",
     ),  # EVENT
     "Behavior.HarpOlfactometer.OdorValveState": (
         ["Valve0", "Valve1", "Valve2"],
@@ -41,12 +41,12 @@ VR_FORAGING_MAPPING = {
     "Behavior.HarpOlfactometer.EndValveState": (
         ["EndValve0"],
         "Odor",
-        "Odor Onset (True). Odor Offset(False)",
+        "Odor Delivery",
     ),  # EVENT
     "Behavior.HarpLickometer.LickState": (
         ["Channel0"],
         "Lick",
-        "Lick onset (True). Lick Offset(False)",
+        "Lick",
     ),  # EVENT
     "Behavior.HarpBehavior.DigitalInputState": (
         ["DIPort0"],
@@ -108,6 +108,28 @@ VR_FORAGING_MAPPING = {
     ),  # CONTINUOUS
 }
 
+HED_TAG_MAPPING = {
+    "Lick": "Lick",
+    "UpdaterRewardDelayOffset": "Reward/Offset",
+    "RngSeed": "Random/Quantitative-value",
+    "StopVelocityThreshold": "Run/Varying/Speed",
+    "water": "Controller-agent/onset",
+    "Odor": "Smell",
+    "Block": "Virtual-world//Experiment-structure",
+    "DepletionVariable": "Quantitative-Value",
+    "ActivePatch": "Virtual-world/Experiment-structure",
+    "PatchRewardAvailable": "Reward/Quantitative-Value",
+    "PatchRewardAmount": "Reward/Quantitative-Value",
+    "PatchRewardProbability": "Reward/Probablity",
+    "VisualCorridorSpecs": "Controller_Agent",
+    "ActiveSite": "Virtual-world/Experiment-structure",
+    "ArmOdor": "Experiment-structure/Controller-agent",
+    "odor_line_load": "Controller-agent",
+    "ChoiceFeedback": "Feedback",
+    "sound": "Sound/onset/Controller-agent",
+    "WaitRewardOutcome": "Waiting-for",
+    "GiveReward": "Reward/Quantitative-value"
+}
 
 def normalize_to_json_string(x):
     """

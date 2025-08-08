@@ -55,7 +55,7 @@ if __name__ == "__main__":
         "event_name": [],
         "event_data": [],
     }
-    meanings_table_dict = {"value": [], "meaning": []}
+    meanings_table_dict = {"value": [], "meaning": [], "HED_Tag": []}
 
     if "behavior" not in nwb.processing:
         processing_module = ProcessingModule(
@@ -72,10 +72,6 @@ if __name__ == "__main__":
             name = item[2]
             description = item[3]
 
-            name_for_nwb = None
-            # if name != column:
-            #     name_for_nwb = f"{name}_{column}"
-            # else:
             name_for_nwb = name
 
             if not is_event:  # classified as timeseries
@@ -109,8 +105,6 @@ if __name__ == "__main__":
                 # Generate mask based on column type
                 if (
                     data[column].dtype == bool
-                    and name != "Lick"
-                    and name != "Odor"
                 ):
                     mask = data[column].tolist()
                 else:
@@ -124,13 +118,16 @@ if __name__ == "__main__":
                 unique_values = pd.Series(filtered_column_values).unique()
                 for value in unique_values:
                     if (
-                        f"{name_for_nwb} - {value}"
+                        f"{name_for_nwb}"
                         not in meanings_table_dict["value"]
                     ):
                         meanings_table_dict["value"].append(
-                            f"{name_for_nwb} - {value}"
+                            f"{name_for_nwb}"
                         )
                         meanings_table_dict["meaning"].append(description)
+                        meanings_table_dict["HED_Tag"].append(
+                            utils.HED_TAG_MAPPING[name_for_nwb]
+                        )
 
                 # Fill event table with filtered rows only
                 event_table_dict["timestamp"].extend(
@@ -159,6 +156,9 @@ if __name__ == "__main__":
             meanings_table_dict["value"].append(f"{name.split('.')[-1]}")
             meanings_table_dict["meaning"].append(
                 nwb.acquisition[software_event].description
+            )
+            meanings_table_dict["HED_Tag"].append(
+                utils.HED_TAG_MAPPING[name.split('.')[-1]]
             )
 
     meanings_table = MeaningsTable.from_dataframe(
@@ -196,6 +196,6 @@ if __name__ == "__main__":
 
     with NWBZarrIO(nwb_output_path, "w") as io:
         io.export(
-            src_io=source_io, nwbfile=nwb, write_args=dict(link_data=False)
+            src_io=source_io, nwbfile=nwb
         )
     logger.info("Successfully wrote processed NWB")
