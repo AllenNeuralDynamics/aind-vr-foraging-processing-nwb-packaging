@@ -128,8 +128,9 @@ HED_TAG_MAPPING = {
     "ChoiceFeedback": "Feedback",
     "sound": "Sound/onset/Controller-agent",
     "WaitRewardOutcome": "Waiting-for",
-    "GiveReward": "Reward/Quantitative-value"
+    "GiveReward": "Reward/Quantitative-value",
 }
+
 
 def normalize_to_json_string(x):
     """

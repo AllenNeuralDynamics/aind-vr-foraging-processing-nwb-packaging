@@ -1,17 +1,17 @@
 import json
 import logging
+from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
 import scipy
+from aind_data_schema.core.processing import DataProcess
 from hdmf_zarr import NWBZarrIO
 from ndx_events import EventsTable, MeaningsTable
 from pydantic import Field
 from pydantic_settings import BaseSettings
 from pynwb.base import ProcessingModule, TimeSeries
 
-from aind_data_schema.core.processing import DataProcess
-from datetime import datetime
 import utils
 
 logger = logging.getLogger(__name__)
@@ -96,13 +96,19 @@ if __name__ == "__main__":
                 data_process = DataProcess(
                     name="Other",
                     software_version=scipy.__version__,
-                    start_date_time = start_process_time,
+                    start_date_time=start_process_time,
                     end_date_time=end_process_time,
                     input_location=raw_nwb_path[0].as_posix(),
                     output_location=settings.output_directory.as_posix(),
-                    parameters={"cuttoff_hz": 50, "filter_length": 61, "nyquist_rate_hz": 500},
-                    code_url="https://github.com/scipy/scipy/tree/main/scipy/signal",
-                    notes="FIR Filter applied to running signal"
+                    parameters={
+                        "cuttoff_hz": 50,
+                        "filter_length": 61,
+                        "nyquist_rate_hz": 500,
+                    },
+                    code_url=(
+                        "https://github.com/scipy/scipy/tree/main/scipy/signal"
+                    )[0],
+                    notes="FIR Filter applied to running signal",
                 )
 
                 ts = TimeSeries(
@@ -121,9 +127,7 @@ if __name__ == "__main__":
                 logger.info(f"Processing event {column} from device {key}")
                 data = nwb.acquisition[key][:]
                 # Generate mask based on column type
-                if (
-                    data[column].dtype == bool
-                ):
+                if data[column].dtype == bool:
                     mask = data[column].tolist()
                 else:
                     mask = [True] * len(data)
@@ -135,13 +139,8 @@ if __name__ == "__main__":
                 # Unique values for meanings
                 unique_values = pd.Series(filtered_column_values).unique()
                 for value in unique_values:
-                    if (
-                        f"{name_for_nwb}"
-                        not in meanings_table_dict["value"]
-                    ):
-                        meanings_table_dict["value"].append(
-                            f"{name_for_nwb}"
-                        )
+                    if f"{name_for_nwb}" not in meanings_table_dict["value"]:
+                        meanings_table_dict["value"].append(f"{name_for_nwb}")
                         meanings_table_dict["meaning"].append(description)
                         meanings_table_dict["HED_Tag"].append(
                             utils.HED_TAG_MAPPING[name_for_nwb]
@@ -176,7 +175,7 @@ if __name__ == "__main__":
                 nwb.acquisition[software_event].description
             )
             meanings_table_dict["HED_Tag"].append(
-                utils.HED_TAG_MAPPING[name.split('.')[-1]]
+                utils.HED_TAG_MAPPING[name.split(".")[-1]]
             )
 
     meanings_table = MeaningsTable.from_dataframe(
@@ -213,11 +212,8 @@ if __name__ == "__main__":
     logger.info(f"Writing to disk now at path {nwb_output_path}")
 
     with NWBZarrIO(nwb_output_path, "w") as io:
-        io.export(
-            src_io=source_io, nwbfile=nwb
-        )
+        io.export(src_io=source_io, nwbfile=nwb)
     logger.info("Successfully wrote processed NWB")
 
     with open(settings.output_directory / "data_process.json", "w") as f:
         f.write(data_process.model_dump_json(indent=4))
-
