@@ -30,7 +30,7 @@ event_table_df = events.to_dataframe()
 event_table_df["processed_event_data"] = [json.loads(v) if v != "" else None for v in event_table_df["processed_event_data"]]
 event_meanings_table = events.meanings_tables["meanings"][:]
 timeseries_streams = nwb.processing.data_interfaces
-stream = "Treadmill_Encoder"
+stream = "Encoder"
 # access one of streams from timeseries
 data = timeseries_streams[stream].data[:] # array with data
 timestamps = timeseries_streams[stream].timestamps[:] # array with timestamps for data
