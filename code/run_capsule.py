@@ -3,6 +3,7 @@ import logging
 from pathlib import Path
 
 import pandas as pd
+import scipy
 from hdmf_zarr import NWBZarrIO
 from ndx_events import EventsTable, MeaningsTable
 from pydantic import Field
@@ -94,7 +95,7 @@ if __name__ == "__main__":
                 end_process_time = datetime.now()
                 data_process = DataProcess(
                     name="Other",
-                    software_version="1.16.1",
+                    software_version=scipy.__version__,
                     start_date_time = start_process_time,
                     end_date_time=end_process_time,
                     input_location=raw_nwb_path[0].as_posix(),
