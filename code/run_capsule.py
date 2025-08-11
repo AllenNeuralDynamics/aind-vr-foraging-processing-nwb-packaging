@@ -94,6 +94,7 @@ if __name__ == "__main__":
                 end_process_time = datetime.now()
                 data_process = DataProcess(
                     name="Other",
+                    software_version="1.16.1",
                     start_date_time = start_process_time,
                     end_date_time=end_process_time,
                     input_location=raw_nwb_path[0].as_posix(),
