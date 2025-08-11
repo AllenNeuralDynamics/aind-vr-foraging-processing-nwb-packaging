@@ -9,6 +9,8 @@ from pydantic import Field
 from pydantic_settings import BaseSettings
 from pynwb.base import ProcessingModule, TimeSeries
 
+from aind_data_schema.core.processing import DataProcess
+from datetime import datetime
 import utils
 
 logger = logging.getLogger(__name__)
@@ -65,6 +67,7 @@ if __name__ == "__main__":
     else:
         processing_module = nwb.processing["behavior"]
 
+    data_process = None
     for key, items in event_timeseries_classification_dict.items():
         for item in items:
             is_event = item[1]
@@ -83,9 +86,22 @@ if __name__ == "__main__":
                 )
                 timestamps = nwb.acquisition[key][:]["Time"].to_numpy()
 
+                start_process_time = datetime.now()
                 data = utils.get_processed_encoder(nwb)[
                     "filtered_velocity"
                 ].to_numpy()
+
+                end_process_time = datetime.now()
+                data_process = DataProcess(
+                    name="Other",
+                    start_date_time = start_process_time,
+                    end_date_time=end_process_time,
+                    input_location=raw_nwb_path[0].as_posix(),
+                    output_location=settings.output_directory.as_posix(),
+                    parameters={"cuttoff_hz": 50, "filter_length": 61, "nyquist_rate_hz": 500},
+                    code_url="https://github.com/scipy/scipy/tree/main/scipy/signal",
+                    notes="FIR Filter applied to running signal"
+                )
 
                 ts = TimeSeries(
                     name=name_for_nwb,
@@ -199,3 +215,7 @@ if __name__ == "__main__":
             src_io=source_io, nwbfile=nwb
         )
     logger.info("Successfully wrote processed NWB")
+
+    with open(settings.output_directory / "data_process.json", "w") as f:
+        f.write(data_process.model_dump_json(indent=4))
+

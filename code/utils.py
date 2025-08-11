@@ -214,10 +214,9 @@ def fir_filter(
         Length of the filter (number of coefficients, the filter order + 1)
         Default to 61
 
-    nyq_rate: float = The Nyquist rate of the signal.
-
-    cutoff_hz: float, default = 500
-        The cutoff frequency of the filter: 5KHz
+    nyq_rate: float
+        The Nyquist rate of the signal.
+        default = 500
 
     Returns
     -------
