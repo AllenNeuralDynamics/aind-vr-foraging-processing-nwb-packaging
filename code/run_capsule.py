@@ -104,12 +104,12 @@ if __name__ == "__main__":
                 )
 
                 ts = TimeSeries(
-                    name=name_for_nwb,
+                    name=column,
                     data=data,
                     timestamps=timestamps,
                     unit="s",
                     description=(
-                        f"{name_for_nwb} - "
+                        f"{column} - "
                         f"{description} with a FIR filter applied"
                     )[0],
                 )
