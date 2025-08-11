@@ -5,26 +5,17 @@ Capsule that processes primary data from vr-foraging task. Capsule can be found 
 This capsule uses the raw packaged data from the [vr_foraging_raw_nwb_capsule](https://codeocean.allenneuraldynamics.org/capsule/3265591/tree). The output of this capsule is a NWB file with the processed data appended to the NWB from the raw packaging. See details below.
 
 ### Usage
-The code snippet below can be used to read in the NWB and access the relevant data. For the processed data, the 2 most important containers are the `processing` and `events` modules.
+The code snippet below can be used to read in the NWB and access the relevant data. For the processed data, the 2 most important containers are the **`processing`** and **`events`** modules. Raw data can be accessed using the **`acquisition`** module in the NWB file.
 
 The processing module contains `timeseries` objects for the following **continuous** streams currently:
-* HarpOlfactometer - Channel0ActualFlow
-* HarpOlfactoemeter - Channel1ActualFlow
-* HarpOlfactometer - Channel2ActualFlow
-* HarpOlfactometer - Channel3ActualFlow
-* HarpSniffDetector - RawVoltage
-* HarpStepperDriver - AccumulatedSteps
-* HarpTreadmill - SensorData (Encoder, Torque, TorqueLoadCurrent)
-* HarpEnvironmentSensor - SensorData (Pressure, Temperature, Humidity)
+* Encoder data where the signal has a FIR filter applied to it
 
-The events module contains a `DynamicTable` for the **event** streams currently:
-* HarpBehavior = PwmStart, Hardware sound onset
-* HarpBehavior - PwmStop, Hardware sound offset
-* HarpBehavior - PulseSupplyPort0, Hardware water onset
-* HarpOlfactometer - OdorValveState (Valve0, Valve1, Valve2), Loading of odor to line
-* HarpOlfactometer - EndValveState, Odor onset (True) and Odor offset (False)
-* HarpLickometer - LickState, Lick onset (True) and Lick offset (False)
-* HarpBehavior - DigitalInputState, Screen synchronization of photodiode
+The events module contains a `DynamicTable` for the **event** streams currently. There are columns for event timestamp, event name, and data associated with the event:
+* Water
+* Licks
+* Sound
+* Events for block, site, patch, etc.
+* Meanings table with HED tags (still in development)
 
 ```
 from hdmf_zarr import NWBZarrIO
