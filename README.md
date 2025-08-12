@@ -18,6 +18,7 @@ The events module contains a `DynamicTable` for the **event** streams currently.
 * Meanings table with HED tags (still in development)
 
 ```
+import json
 from hdmf_zarr import NWBZarrIO
 
 # REPLACE WITH PATH TO NWB
@@ -27,9 +28,9 @@ with NWBZarrIO('path/to/nwb', 'r') as io:
 events = nwb.get_events__events_tables()
 event_table_df = events.to_dataframe()
 # recover original data types from nwb
-event_table_df["processed_event_data"] = [json.loads(v) if v != "" else None for v in event_table_df["processed_event_data"]]
+event_table_df["event_data"] = [json.loads(v) if v != "" else None for v in event_table_df["event_data"]]
 event_meanings_table = events.meanings_tables["meanings"][:]
-timeseries_streams = nwb.processing.data_interfaces
+timeseries_streams = nwb.processing["behavior"].data_interfaces
 stream = "Encoder"
 # access one of streams from timeseries
 data = timeseries_streams[stream].data[:] # array with data
