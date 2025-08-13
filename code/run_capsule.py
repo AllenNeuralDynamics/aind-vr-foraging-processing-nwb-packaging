@@ -48,10 +48,17 @@ if __name__ == "__main__":
     source_io = NWBZarrIO(raw_nwb_path[0].as_posix(), "r")
     nwb = source_io.read()
 
+    # load hardware mapping
+    # dictionary of name in nwb acquisition
+    # with mapping to register in nwb, nwb name, is event or not
+    with open(settings.input_directory.parent / "hardware_mapping.json") as f:
+        VR_FORAGING_MAPPING = json.load(f)
+
+    with open(settings.input_directory.parent / "hed_tag_mapping.json") as f:
+        HED_TAG_MAPPING = json.load(f)
+
     event_timeseries_classification_dict = (
-        utils.get_event_timeseries_classifications(
-            utils.VR_FORAGING_MAPPING, nwb
-        )
+        utils.get_event_timeseries_classifications(VR_FORAGING_MAPPING, nwb)
     )
     event_table_dict = {
         "timestamp": [],
@@ -143,7 +150,7 @@ if __name__ == "__main__":
                         meanings_table_dict["value"].append(f"{name_for_nwb}")
                         meanings_table_dict["meaning"].append(description)
                         meanings_table_dict["HED_Tag"].append(
-                            utils.HED_TAG_MAPPING[name_for_nwb]
+                            HED_TAG_MAPPING[name_for_nwb]
                         )
 
                 # Fill event table with filtered rows only
@@ -175,7 +182,7 @@ if __name__ == "__main__":
                 nwb.acquisition[software_event].description
             )
             meanings_table_dict["HED_Tag"].append(
-                utils.HED_TAG_MAPPING[name.split(".")[-1]]
+                HED_TAG_MAPPING[name.split(".")[-1]]
             )
 
     meanings_table = MeaningsTable.from_dataframe(
