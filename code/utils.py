@@ -1,5 +1,6 @@
 import json
 import logging
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -7,107 +8,38 @@ import pynwb
 from packaging.version import Version
 from scipy.signal import filtfilt, firwin
 
-
 logger = logging.getLogger(__name__)
 
-# this a mapping that Tiffany provided.
-# TODO: get this from aind instrument/rig.json
-VR_FORAGING_MAPPING = {
-    "Behavior.HarpBehavior.PwmStart": (
-        ["PwmDO2"],
-        "sound_onset",
-        "Hardware sound onset",
-    ),  # EVENT
-    "Behavior.HarpBehavior.PwmStop": (
-        ["PwmDO2"],
-        "sound_offset",
-        "Hardware sound offset",
-    ),  # EVENT
-    "Behavior.HarpBehavior.PulseSupplyPort0": (
-        ["PulseSupplyPort0"],
-        "water_onset",
-        "Hardware water onset",
-    ),  # EVENT
-    "Behavior.HarpOlfactometer.OdorValveState": (
-        ["Valve0", "Valve1", "Valve2"],
-        "odor_line_load",
-        (
-            "Loading of odor to line. "
-            "Doesn’t mean odor is presented to the mouse "
-            "but needs to happen before EndValve trigger"
-            "and defines what odor is "
-            "being presented."
-        ),
-    ),  # EVENT
-    "Behavior.HarpOlfactometer.EndValveState": (
-        ["EndValve0"],
-        "Odor",
-        "Odor onset (True) and Odor offset (False)",
-    ),  # EVENT
-    "Behavior.HarpLickometer.LickState": (
-        ["Channel0"],
-        "Lick_state",
-        "Lick onset (True) and Lick offset (False)",
-    ),  # EVENT
-    "Behavior.HarpBehavior.DigitalInputState": (
-        ["DIPort0"],
-        "Photodiode",
-        "Screen synchronization photodiode",
-    ),  # CONTINUOUS
-    "Behavior.HarpOlfactometer.Channel0ActualFlow": (
-        ["Channel0ActualFlow"],
-        "Channel0ActualFlow",
-        "Measure flow in channel 0",
-    ),  # CONTINUOUS
-    "Behavior.HarpOlfactometer.Channel1ActualFlow": (
-        ["Channel1ActualFlow"],
-        "Channel1ActualFlow",
-        "Measure flow in channel 1",
-    ),  # CONTINUOUS
-    "Behavior.HarpOlfactometer.Channel2ActualFlow": (
-        ["Channel2ActualFlow"],
-        "Channel2ActualFlow",
-        "Measure flow in channel 2",
-    ),  # CONTINUOUS
-    "Behavior.HarpOlfactometer.Channel3ActualFlow": (
-        ["Channel3ActualFlow"],
-        "Channel3ActualFlow",
-        "Measure flow in channel 3",
-    ),  # CONTINUOUS
-    "Behavior.HarpOlfactometer.Channel4ActualFlow": (
-        ["Channel4ActualFlow"],
-        "Channel4ActualFlow",
-        "Measure flow in channel 4",
-    ),  # CONTINUOUS
-    "Behavior.HarpSniffDetector.RawVoltage": (
-        ["RawVoltage"],
-        "Breathing",
-        "Breathing signal",
-    ),  # CONTINUOUS
-    "Behavior.HarpStepperDriver.AccumulatedSteps": (
-        ["Motor0, Motor1, Motor2, Motor3"],
-        "MotorPositions",
-        "The position of x, y1, y2, and z  of the lickspout and oder tube",
-    ),  # CONTINUOUS
-    "Behavior.HarpTreadmill.SensorData": (
-        [
-            "Encoder",
-            "Torque",
-            "TorqueLoadCurrent",
-        ],
-        "Treadmill",
-        "Continuous signal from treadmill",
-    ),  # CONTINUOUS
-    "Behavior.HarpEnvironmentSensor.SensorData": (
-        [
-            "Pressure",
-            "Temperature",
-            "Humidity",
-        ],
-        "Environment",
-        "Continuous signal from environment sensor",
-    ),  # CONTINUOUS
-}
+
+def normalize_to_json_string(x: Any) -> str:
+    """
+    Normalizes input to a JSON-compatible string for NWB.
+
+    Parameters
+    ----------
+    x : Any
+        The input to normalize.
+        Can be a dict, string, None, or other JSON-serializable types.
+
+    Returns
+    -------
+    str
+        A JSON-formatted string representing the input.
+    """
+    if isinstance(x, dict):
+        return json.dumps(x)  # serialize dict (handles nesting)
+    elif isinstance(x, str):
+        try:
+            json.loads(x)  # check if valid JSON string
+            return x  # already a valid JSON string
+        except json.JSONDecodeError:
+            # Not a valid JSON string, re-encode
+            return json.dumps(x)
+    elif x is None:
+        return "null"
+    else:
+        # fallback: try to serialize other types
+        return json.dumps(x)
 
 
 # ported from Tiffany's processing code
@@ -162,10 +94,9 @@ def fir_filter(
         Length of the filter (number of coefficients, the filter order + 1)
         Default to 61
 
-    nyq_rate: float = The Nyquist rate of the signal.
-
-    cutoff_hz: float, default = 500
-        The cutoff frequency of the filter: 5KHz
+    nyq_rate: float
+        The Nyquist rate of the signal.
+        default = 500
 
     Returns
     -------
@@ -329,6 +260,7 @@ def get_event_timeseries_classifications(
         registers = contents[0]
         name = contents[1]
         description = contents[2]
+        is_event = contents[3]
 
         for register in registers:
             if device not in nwb.acquisition.keys():
@@ -337,15 +269,13 @@ def get_event_timeseries_classifications(
                 )
                 continue
 
-            data = nwb.acquisition[device][:]["Time"]
-            is_this_event = is_event(data)
             if device in register_event_timseries_classification:
                 register_event_timseries_classification[device].append(
-                    (register, is_this_event, name, description)
+                    (register, is_event, name, description)
                 )
             else:
                 register_event_timseries_classification[device] = [
-                    (register, is_this_event, name, description)
+                    (register, is_event, name, description)
                 ]
 
     return register_event_timseries_classification
