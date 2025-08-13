@@ -16,16 +16,19 @@ VR_FORAGING_MAPPING = {
         ["PwmDO2"],
         "sound",
         "Sound delivered from hardware",
+        True
     ),  # EVENT
     "Behavior.HarpBehavior.PwmStop": (
         ["PwmDO2"],
         "sound_offset",
         "Hardware sound offset",
+        True
     ),  # EVENT
     "Behavior.HarpBehavior.PulseSupplyPort0": (
         ["PulseSupplyPort0"],
         "water",
         "Water delivered from hardware",
+        True
     ),  # EVENT
     "Behavior.HarpOlfactometer.OdorValveState": (
         ["Valve0", "Valve1", "Valve2"],
@@ -37,56 +40,67 @@ VR_FORAGING_MAPPING = {
             "and defines what odor is "
             "being presented."
         ),
+        True
     ),  # EVENT
     "Behavior.HarpOlfactometer.EndValveState": (
         ["EndValve0"],
         "Odor",
         "Odor Delivery",
+        True
     ),  # EVENT
     "Behavior.HarpLickometer.LickState": (
         ["Channel0"],
         "Lick",
         "Lick",
+        True
     ),  # EVENT
     "Behavior.HarpBehavior.DigitalInputState": (
         ["DIPort0"],
         "Photodiode",
         "Screen synchronization photodiode",
+        False
     ),  # CONTINUOUS
     "Behavior.HarpOlfactometer.Channel0ActualFlow": (
         ["Channel0ActualFlow"],
         "Channel0ActualFlow",
         "Measure flow in channel 0",
+        False
     ),  # CONTINUOUS
     "Behavior.HarpOlfactometer.Channel1ActualFlow": (
         ["Channel1ActualFlow"],
         "Channel1ActualFlow",
         "Measure flow in channel 1",
+        False
     ),  # CONTINUOUS
     "Behavior.HarpOlfactometer.Channel2ActualFlow": (
         ["Channel2ActualFlow"],
         "Channel2ActualFlow",
         "Measure flow in channel 2",
+        False
     ),  # CONTINUOUS
     "Behavior.HarpOlfactometer.Channel3ActualFlow": (
         ["Channel3ActualFlow"],
         "Channel3ActualFlow",
         "Measure flow in channel 3",
+        False
     ),  # CONTINUOUS
     "Behavior.HarpOlfactometer.Channel4ActualFlow": (
         ["Channel4ActualFlow"],
         "Channel4ActualFlow",
         "Measure flow in channel 4",
+        False
     ),  # CONTINUOUS
     "Behavior.HarpSniffDetector.RawVoltage": (
         ["RawVoltage"],
         "Breathing",
         "Breathing signal",
+        False
     ),  # CONTINUOUS
     "Behavior.HarpStepperDriver.AccumulatedSteps": (
         ["Motor0, Motor1, Motor2, Motor3"],
         "MotorPositions",
         "The position of x, y1, y2, and z  of the lickspout and oder tube",
+        False
     ),  # CONTINUOUS
     "Behavior.HarpTreadmill.SensorData": (
         [
@@ -96,6 +110,7 @@ VR_FORAGING_MAPPING = {
         ],
         "Treadmill",
         "Continuous signal from treadmill",
+        False
     ),  # CONTINUOUS
     "Behavior.HarpEnvironmentSensor.SensorData": (
         [
@@ -105,6 +120,7 @@ VR_FORAGING_MAPPING = {
         ],
         "Environment",
         "Continuous signal from environment sensor",
+        False
     ),  # CONTINUOUS
 }
 
@@ -381,6 +397,7 @@ def get_event_timeseries_classifications(
         registers = contents[0]
         name = contents[1]
         description = contents[2]
+        is_event = contents[3]
 
         for register in registers:
             if device not in nwb.acquisition.keys():
@@ -389,8 +406,8 @@ def get_event_timeseries_classifications(
                 )
                 continue
 
-            data = nwb.acquisition[device][:]["Time"]
-            is_this_event = is_event(data)
+            #data = nwb.acquisition[device][:]["Time"]
+            is_this_event = is_event
             if device in register_event_timseries_classification:
                 register_event_timseries_classification[device].append(
                     (register, is_this_event, name, description)
