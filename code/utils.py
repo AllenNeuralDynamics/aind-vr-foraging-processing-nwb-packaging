@@ -1,5 +1,6 @@
 import json
 import logging
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -10,7 +11,7 @@ from scipy.signal import filtfilt, firwin
 logger = logging.getLogger(__name__)
 
 
-def normalize_to_json_string(x):
+def normalize_to_json_string(x: Any) -> str:
     """
     Normalizes input to a JSON-compatible string for NWB.
 
@@ -268,15 +269,13 @@ def get_event_timeseries_classifications(
                 )
                 continue
 
-            # data = nwb.acquisition[device][:]["Time"]
-            is_this_event = is_event
             if device in register_event_timseries_classification:
                 register_event_timseries_classification[device].append(
-                    (register, is_this_event, name, description)
+                    (register, is_event, name, description)
                 )
             else:
                 register_event_timseries_classification[device] = [
-                    (register, is_this_event, name, description)
+                    (register, is_event, name, description)
                 ]
 
     return register_event_timseries_classification

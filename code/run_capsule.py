@@ -83,10 +83,10 @@ if __name__ == "__main__":
             name = item[2]
             description = item[3]
 
-            name_for_nwb = name
-
             if not is_event:  # classified as timeseries
-                if column != "Encoder":  # only processing done on Encoder
+                # only processing is done on encoder
+                # with a filter applied to it
+                if column != "Encoder":
                     continue
 
                 logger.info(
@@ -146,11 +146,11 @@ if __name__ == "__main__":
                 # Unique values for meanings
                 unique_values = pd.Series(filtered_column_values).unique()
                 for value in unique_values:
-                    if f"{name_for_nwb}" not in meanings_table_dict["value"]:
-                        meanings_table_dict["value"].append(f"{name_for_nwb}")
+                    if name not in meanings_table_dict["value"]:
+                        meanings_table_dict["value"].append(name)
                         meanings_table_dict["meaning"].append(description)
                         meanings_table_dict["HED_Tag"].append(
-                            HED_TAG_MAPPING[name_for_nwb]
+                            HED_TAG_MAPPING[name]
                         )
 
                 # Fill event table with filtered rows only
@@ -158,7 +158,7 @@ if __name__ == "__main__":
                     filtered_rows["Time"].tolist()
                 )
                 event_table_dict["event_name"].extend(
-                    [name_for_nwb] * len(filtered_rows)
+                    [name] * len(filtered_rows)
                 )
                 event_table_dict["event_data"].extend(
                     [json.dumps(d) for d in filtered_column_values]
@@ -177,7 +177,7 @@ if __name__ == "__main__":
             data["data"].apply(utils.normalize_to_json_string).tolist()
         )
         for name in data["name"].unique():
-            meanings_table_dict["value"].append(f"{name.split('.')[-1]}")
+            meanings_table_dict["value"].append(name.split(".")[-1])
             meanings_table_dict["meaning"].append(
                 nwb.acquisition[software_event].description
             )
@@ -213,7 +213,7 @@ if __name__ == "__main__":
     nwb.add_events_table(event_table)
 
     nwb_output_path = (
-        settings.output_directory / f"{raw_nwb_path[0].stem}-processed"
+        settings.output_directory / f"{raw_nwb_path[0].stem}-processed.zarr"
     ).as_posix()
     logger.info("Finished packaging processed timeseries and events.")
     logger.info(f"Writing to disk now at path {nwb_output_path}")
