@@ -107,13 +107,16 @@ if __name__ == "__main__":
                     stage=ProcessStage.PROCESSING,
                     name="FIR Filter",
                     code=Code(
-                        url="https://github.com/scipy/scipy/tree/main/scipy/signal",
+                        url=str(
+                            "https://github.com/scipy/scipy/tree/" 
+                            "main/scipy/signal",
+                        ),
                         version=scipy.__version__,
                         parameters={
                             "cuttoff_hz": 50,
                             "filter_length": 61,
                             "nyquist_rate_hz": 500,
-                        }
+                        },
                     ),
                     experimenters=["Arjun Sridhar"],
                     start_date_time=start_process_time,
