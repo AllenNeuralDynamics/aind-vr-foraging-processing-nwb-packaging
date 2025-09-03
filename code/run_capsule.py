@@ -5,7 +5,9 @@ from pathlib import Path
 
 import pandas as pd
 import scipy
-from aind_data_schema.core.processing import DataProcess
+from aind_data_schema.components.identifiers import Code
+from aind_data_schema.core.processing import DataProcess, ProcessStage
+from aind_data_schema_models.process_names import ProcessName
 from hdmf_zarr import NWBZarrIO
 from ndx_events import EventsTable, MeaningsTable
 from pydantic import Field
@@ -101,20 +103,22 @@ if __name__ == "__main__":
 
                 end_process_time = datetime.now()
                 data_process = DataProcess(
-                    name="Other",
-                    software_version=scipy.__version__,
+                    process_type=ProcessName.OTHER,
+                    stage=ProcessStage.PROCESSING,
+                    name="FIR Filter",
+                    code=Code(
+                        url="https://github.com/scipy/scipy/tree/main/scipy/signal",
+                        version=scipy.__version__,
+                        parameters={
+                            "cuttoff_hz": 50,
+                            "filter_length": 61,
+                            "nyquist_rate_hz": 500,
+                        }
+                    ),
+                    experimenters=["Arjun Sridhar"],
                     start_date_time=start_process_time,
                     end_date_time=end_process_time,
-                    input_location=raw_nwb_path[0].as_posix(),
-                    output_location=settings.output_directory.as_posix(),
-                    parameters={
-                        "cuttoff_hz": 50,
-                        "filter_length": 61,
-                        "nyquist_rate_hz": 500,
-                    },
-                    code_url=(
-                        "https://github.com/scipy/scipy/tree/main/scipy/signal"
-                    )[0],
+                    output_path=settings.output_directory.as_posix(),
                     notes="FIR Filter applied to running signal",
                 )
 
