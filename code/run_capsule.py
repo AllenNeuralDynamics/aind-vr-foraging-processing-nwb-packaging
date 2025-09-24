@@ -177,13 +177,14 @@ if __name__ == "__main__":
             data["data"].apply(utils.normalize_to_json_string).tolist()
         )
         for name in data["name"].unique():
-            meanings_table_dict["value"].append(name.split(".")[-1])
-            meanings_table_dict["meaning"].append(
-                nwb.acquisition[software_event].description
-            )
-            meanings_table_dict["HED_Tag"].append(
-                HED_TAG_MAPPING[name.split(".")[-1]]
-            )
+            if name in HED_TAG_MAPPING:
+                meanings_table_dict["value"].append(name.split(".")[-1])
+                meanings_table_dict["meaning"].append(
+                    nwb.acquisition[software_event].description
+                )
+                meanings_table_dict["HED_Tag"].append(
+                    HED_TAG_MAPPING[name.split(".")[-1]]
+                )
 
     meanings_table = MeaningsTable.from_dataframe(
         pd.DataFrame(meanings_table_dict),
