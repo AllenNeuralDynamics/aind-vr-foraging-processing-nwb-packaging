@@ -12,7 +12,7 @@ from pydantic import Field
 from pydantic_settings import BaseSettings
 from pynwb.base import ProcessingModule, TimeSeries
 
-import utils
+import utils_refactored
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +48,51 @@ if __name__ == "__main__":
     source_io = NWBZarrIO(raw_nwb_path[0].as_posix(), "r")
     nwb = source_io.read()
 
+    start_process_time = datetime.now()
+    metrics_from_nwb = utils_refactored.MetricsVrForaging(nwb)
+    end_process_time = datetime.now()
+    data_process = DataProcess(
+        name="Other",
+        software_version=scipy.__version__,
+        start_date_time=start_process_time,
+        end_date_time=end_process_time,
+        input_location=raw_nwb_path[0].as_posix(),
+        output_location=settings.output_directory.as_posix(),
+        parameters={
+            "cuttoff_hz": 50,
+            "filter_length": 61,
+            "nyquist_rate_hz": 500,
+        },
+        code_url=str(
+            "https://github.com/scipy/scipy/tree/main/scipy/signal"
+        ),
+        notes="FIR Filter applied to running signal",
+    )
+    event_df = metrics_from_nwb.active_site_add.reset_index()
+    event_df["timestamp"] = event_df["start_time"]
+    event_df["duration"] = event_df["stop_time"] - event_df["start_time"]
+
+    event_table = EventsTable.from_dataframe(
+        event_df,
+        name="events",
+        table_description="Events for VR Foraging task",
+    )
+
+    nwb.add_events_table(event_table)
+    nwb_output_path = (
+        settings.output_directory / f"{raw_nwb_path[0].stem}-processed.zarr"
+    ).as_posix()
+    logger.info("Finished packaging processed timeseries and events.")
+    logger.info(f"Writing to disk now at path {nwb_output_path}")
+
+    with NWBZarrIO(nwb_output_path, "w") as io:
+        io.export(src_io=source_io, nwbfile=nwb)
+    logger.info("Successfully wrote processed NWB")
+
+    with open(settings.output_directory / "data_process.json", "w") as f:
+        f.write(data_process.model_dump_json(indent=4))
+
+    """
     # load hardware mapping
     # dictionary of name in nwb acquisition
     # with mapping to register in nwb, nwb name, is event or not
@@ -225,3 +270,4 @@ if __name__ == "__main__":
 
     with open(settings.output_directory / "data_process.json", "w") as f:
         f.write(data_process.model_dump_json(indent=4))
+    """
