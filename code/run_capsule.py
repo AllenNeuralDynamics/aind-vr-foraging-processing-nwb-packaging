@@ -112,9 +112,9 @@ if __name__ == "__main__":
                         "filter_length": 61,
                         "nyquist_rate_hz": 500,
                     },
-                    code_url=(
+                    code_url=str(
                         "https://github.com/scipy/scipy/tree/main/scipy/signal"
-                    )[0],
+                    ),
                     notes="FIR Filter applied to running signal",
                 )
 
