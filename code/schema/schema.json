@@ -1,0 +1,89 @@
+{
+  "$defs": {
+    "NwbEvent": {
+      "description": "Individual event definition within the NWB events specification.",
+      "properties": {
+        "data_type": {
+          "description": "JSON Schema type - can be a single type or nullable type [type, null]",
+          "enum": [
+            "string",
+            "number",
+            "integer",
+            "boolean",
+            "array",
+            "object",
+            "null"
+          ],
+          "title": "Data Type",
+          "type": "string"
+        },
+        "is_nullable": {
+          "default": false,
+          "description": "Indicates whether the event can be null",
+          "title": "Is Nullable",
+          "type": "boolean"
+        },
+        "description": {
+          "description": "Human-readable description of the item",
+          "title": "Description",
+          "type": "string"
+        },
+        "implementation_details": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Implementation detail or reference",
+          "title": "Implementation Details"
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Unit of measurement or specification",
+          "title": "Unit"
+        }
+      },
+      "required": [
+        "data_type",
+        "description"
+      ],
+      "title": "NwbEvent",
+      "type": "object"
+    }
+  },
+  "description": "NWB Event Description Schema - top-level specification for NWB events.",
+  "properties": {
+    "date": {
+      "description": "Date and time when the data was recorded",
+      "format": "date",
+      "title": "Date",
+      "type": "string"
+    },
+    "events": {
+      "additionalProperties": {
+        "$ref": "#/$defs/NwbEvent"
+      },
+      "description": "Dictionary of event definitions keyed by event name",
+      "title": "Events",
+      "type": "object"
+    }
+  },
+  "required": [
+    "date",
+    "events"
+  ],
+  "title": "NwbEventsSpec",
+  "type": "object"
+}

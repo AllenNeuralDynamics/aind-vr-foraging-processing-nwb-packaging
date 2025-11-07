@@ -4,106 +4,117 @@ date: "2025-11-06"
 events:
   start_time:
     description: Start time, in software, for this site.
-    type: number
+    data_type: number
     implementation_details: Low-precision timestamp
     unit: second
   stop_time:
     description: Stop time, in software, for this site.
-    type: number
+    data_type: number
     implementation_details: Low-precision timestamp
     unit: second
   start_position:
     description: Start coordinate for this site in the VR environment
-    type: number
+    data_type: number
     unit: centimeter
   length:
     description: The length of the site.
     unit: centimeter
-    type: number
+    data_type: number
   site_id:
     description: Label of the site
     implementation_details: Uses https://allenneuraldynamics.github.io/Aind.Behavior.VrForaging/api.task_logic.html#aind_behavior_vr_foraging.task_logic.VirtualSiteLabels
-    type: string
+    data_type: string
   friction:
     description: Assigned friction for the site.
     unit: percentage
-    type: number
+    data_type: number
   patch_label:
     description: Patch type name
-    type: string
+    data_type: string
     implementation_details: Uses (https://allenneuraldynamics.github.io/Aind.Behavior.VrForaging/api.task_logic.html#aind_behavior_vr_foraging.task_logic.Patch.label)
   odor_label:
     description: Odor molecule assigned to patch
-    type: string
+    data_type: string
     implementation_details: (#TODO Not clear where this should be coming from) Not even sure if this should be here at all....
   patch_index:
     description: Patch number within the session
-    type: integer
+    data_type: integer
   patch_in_block_index:
     description: Patch number within the block
-    type: integer
+    data_type: integer
   site_index:
     description: Site number within the session
-    type: integer
+    data_type: integer
   site_in_block_index:
     description: Site number within the block
-    type: integer
+    data_type: integer
   site_in_patch_index:
     description: Site number within the patch
-    type: integer
+    data_type: integer
   site_by_type_in_patch_index:
     description: Same as site_in_patch_index but only counting sites of the same type (e.g. RewardSite)
-    type: integer
+    data_type: integer
   odor_onset_time:
     description: Time of odor onset. Will be null if no odor was delivered.
-    type: ["null", number]
+    data_type: number
+    is_nullable: true
     unit: second
   odor_offset_time:
     description: Time of odor offset. Will be null if no odor was delivered.
-    type: ["null", number]
+    data_type: number
     unit: second
+    is_nullable: true
   reward_onset_time:
     description: Time when reward was delivered
-    type: ["null", number]
+    data_type: number
+    is_nullable: true
     unit: second
   reward_amount:
     description: Amount of reward delivered
-    type: ["null", number]
+    data_type: number
+    is_nullable: true
     unit: milliliter
   has_reward:
     description: Boolean whether reward was delivered, bool.
-    type: ["null", boolean]
+    data_type: boolean
+    is_nullable: true
   harvest_cue_time:
     description: Time when harvest cue was delivered. Also can be considered the stop cue. The harvest tone is delivered when a stop is successful.
-    type: ["null", number]
+    data_type: number
+    is_nullable: true
     unit: second
   has_harvest:
     description: Defines whether a harvest occurred in the site.
-    type: ["null", boolean]
+    data_type: boolean
+    is_nullable: true
   lick_in_site_times:
     description: Lick times in the site. Timestamps are still absolute.
-    type: array
+    data_type: array
     unit: second
   has_lick:
     description: Defines whether a lick occurred in the site.
-    type: boolean
+    data_type: boolean
   reward_delay_duration:
     description: reward_onset_time - harvest_cue_time
-    type: ["null", number]
+    data_type: number
+    is_nullable: true
     unit: second
   has_waited_reward_delay:
     description: Boolean whether the mouse successfully waited through the reward delay to get the reward. Will be null if has_harvest is false.
-    type: ["null", boolean]
+    data_type: boolean
+    is_nullable: true
   reward_probability:
     description: Reward probability at the time of the reward delivery. Will be null if the reward is not sampled (e.g. no has_harvest is False)
-    type: ["null", number]
+    data_type: number
+    is_nullable: true
     unit: percentage
     implementation_details: Should use the `PatchStateAtReward` SoftwareEvent. Otherwise (older datasets), it should use the closest `PatchState`
   reward_available:
     description: Reward left at the time of reward delivery. Will be null if the reward is not sampled (e.g. no has_harvest is False)
-    type: ["null", number]
+    data_type: number
+    is_nullable: true
     unit: milliliter
     implementation_details: Should use the `PatchStateAtReward` SoftwareEvent. Otherwise (older datasets), it should use the closest `PatchState`
   block_index:
     description: Block number within the session
-    type: integer
+    data_type: integer
