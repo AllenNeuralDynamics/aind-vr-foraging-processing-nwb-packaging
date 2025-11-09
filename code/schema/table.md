@@ -1,5 +1,7 @@
 # NWB Events Specification
 
+<!-- DO NOT MANUALLY EDIT THIS FILE. THIS IS AUTO-GENERATED USING `specification.yml`!!!! -->
+
 **Date:** 2025-11-06
 
 | Event Name | Data Type | Nullable | Unit | Description | Implementation Details |
@@ -12,6 +14,7 @@
 | friction | number | No | percentage | Assigned friction for the site. |  |
 | patch_label | string | No |  | Patch type name | Uses (https://allenneuraldynamics.github.io/Aind.Behavior.VrForaging/api.task_logic.html#aind_behavior_vr_foraging.task_logic.Patch.label) |
 | odor_label | string | No |  | Odor molecule assigned to patch | (#TODO Not clear where this should be coming from) Not even sure if this should be here at all.... |
+| odor_concentration | array | No | percentage | An array of representing the concentration levels of each odor channels. Channels are expected to be sorted by channel number. (i.e. [ch0, ch1, ch2]) |  |
 | patch_index | integer | No |  | Patch number within the session |  |
 | patch_in_block_index | integer | No |  | Patch number within the block |  |
 | site_index | integer | No |  | Site number within the session |  |

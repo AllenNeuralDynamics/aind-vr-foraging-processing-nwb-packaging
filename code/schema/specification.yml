@@ -36,6 +36,10 @@ events:
     description: Odor molecule assigned to patch
     data_type: string
     implementation_details: (#TODO Not clear where this should be coming from) Not even sure if this should be here at all....
+  odor_concentration:
+    description: An array of representing the concentration levels of each odor channels. Channels are expected to be sorted by channel number. (i.e. [ch0, ch1, ch2])
+    data_type: array
+    unit: percentage
   patch_index:
     description: Patch number within the session
     data_type: integer
