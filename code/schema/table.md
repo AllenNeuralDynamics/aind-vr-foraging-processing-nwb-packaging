@@ -25,12 +25,12 @@
 | odor_offset_time | number | Yes | second | Time of odor offset. Will be null if no odor was delivered. |  |
 | reward_onset_time | number | Yes | second | Time when reward was delivered |  |
 | reward_amount | number | Yes | milliliter | Amount of reward delivered |  |
+| reward_probability | number | Yes | percentage | Reward probability at the time of the reward delivery. Will be null if the reward is not sampled (e.g. no has_choice is False) | Should use the `PatchStateAtReward` SoftwareEvent. Otherwise (older datasets), it should use the closest `PatchState` |
+| reward_available | number | Yes | milliliter | Reward left at the time of reward delivery. Will be null if the reward is not sampled (e.g. no has_choice is False) | Should use the `PatchStateAtReward` SoftwareEvent. Otherwise (older datasets), it should use the closest `PatchState` |
 | has_reward | boolean | Yes |  | Boolean whether reward was delivered, bool. |  |
 | choice_cue_time | number | Yes | second | Time when choice cue was delivered. Also can be considered the stop cue. The choice tone is delivered when a stop is successful. |  |
 | has_choice | boolean | Yes |  | Defines whether a choice occurred in the site. |  |
 | has_lick | boolean | No |  | Defines whether a lick occurred in the site. |  |
 | reward_delay_duration | number | Yes | second | reward_onset_time - choice_cue_time |  |
 | has_waited_reward_delay | boolean | Yes |  | Boolean whether the mouse successfully waited through the reward delay to get the reward. Will be null if has_choice is false. |  |
-| reward_probability | number | Yes | percentage | Reward probability at the time of the reward delivery. Will be null if the reward is not sampled (e.g. no has_choice is False) | Should use the `PatchStateAtReward` SoftwareEvent. Otherwise (older datasets), it should use the closest `PatchState` |
-| reward_available | number | Yes | milliliter | Reward left at the time of reward delivery. Will be null if the reward is not sampled (e.g. no has_choice is False) | Should use the `PatchStateAtReward` SoftwareEvent. Otherwise (older datasets), it should use the closest `PatchState` |
 | block_index | integer | No |  | Block number within the session |  |

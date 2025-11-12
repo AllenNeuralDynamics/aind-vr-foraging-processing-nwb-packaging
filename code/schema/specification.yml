@@ -78,6 +78,18 @@ events:
     data_type: number
     is_nullable: true
     unit: milliliter
+  reward_probability:
+    description: Reward probability at the time of the reward delivery. Will be null if the reward is not sampled (e.g. no has_choice is False)
+    data_type: number
+    is_nullable: true
+    unit: percentage
+    implementation_details: Should use the `PatchStateAtReward` SoftwareEvent. Otherwise (older datasets), it should use the closest `PatchState`
+  reward_available:
+    description: Reward left at the time of reward delivery. Will be null if the reward is not sampled (e.g. no has_choice is False)
+    data_type: number
+    is_nullable: true
+    unit: milliliter
+    implementation_details: Should use the `PatchStateAtReward` SoftwareEvent. Otherwise (older datasets), it should use the closest `PatchState`
   has_reward:
     description: Boolean whether reward was delivered, bool.
     data_type: boolean
@@ -103,18 +115,6 @@ events:
     description: Boolean whether the mouse successfully waited through the reward delay to get the reward. Will be null if has_choice is false.
     data_type: boolean
     is_nullable: true
-  reward_probability:
-    description: Reward probability at the time of the reward delivery. Will be null if the reward is not sampled (e.g. no has_choice is False)
-    data_type: number
-    is_nullable: true
-    unit: percentage
-    implementation_details: Should use the `PatchStateAtReward` SoftwareEvent. Otherwise (older datasets), it should use the closest `PatchState`
-  reward_available:
-    description: Reward left at the time of reward delivery. Will be null if the reward is not sampled (e.g. no has_choice is False)
-    data_type: number
-    is_nullable: true
-    unit: milliliter
-    implementation_details: Should use the `PatchStateAtReward` SoftwareEvent. Otherwise (older datasets), it should use the closest `PatchState`
   block_index:
     description: Block number within the session
     data_type: integer
