@@ -82,35 +82,35 @@ events:
     description: Boolean whether reward was delivered, bool.
     data_type: boolean
     is_nullable: true
-  harvest_cue_time:
-    description: Time when harvest cue was delivered. Also can be considered the stop cue. The harvest tone is delivered when a stop is successful.
+  choice_cue_time:
+    description: Time when choice cue was delivered. Also can be considered the stop cue. The choice tone is delivered when a stop is successful.
     data_type: number
     is_nullable: true
     unit: second
-  has_harvest:
-    description: Defines whether a harvest occurred in the site.
+  has_choice:
+    description: Defines whether a choice occurred in the site.
     data_type: boolean
     is_nullable: true
   has_lick:
     description: Defines whether a lick occurred in the site.
     data_type: boolean
   reward_delay_duration:
-    description: reward_onset_time - harvest_cue_time
+    description: reward_onset_time - choice_cue_time
     data_type: number
     is_nullable: true
     unit: second
   has_waited_reward_delay:
-    description: Boolean whether the mouse successfully waited through the reward delay to get the reward. Will be null if has_harvest is false.
+    description: Boolean whether the mouse successfully waited through the reward delay to get the reward. Will be null if has_choice is false.
     data_type: boolean
     is_nullable: true
   reward_probability:
-    description: Reward probability at the time of the reward delivery. Will be null if the reward is not sampled (e.g. no has_harvest is False)
+    description: Reward probability at the time of the reward delivery. Will be null if the reward is not sampled (e.g. no has_choice is False)
     data_type: number
     is_nullable: true
     unit: percentage
     implementation_details: Should use the `PatchStateAtReward` SoftwareEvent. Otherwise (older datasets), it should use the closest `PatchState`
   reward_available:
-    description: Reward left at the time of reward delivery. Will be null if the reward is not sampled (e.g. no has_harvest is False)
+    description: Reward left at the time of reward delivery. Will be null if the reward is not sampled (e.g. no has_choice is False)
     data_type: number
     is_nullable: true
     unit: milliliter
