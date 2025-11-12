@@ -91,10 +91,6 @@ events:
     description: Defines whether a harvest occurred in the site.
     data_type: boolean
     is_nullable: true
-  lick_in_site_times:
-    description: Lick times in the site. Timestamps are still absolute.
-    data_type: array
-    unit: second
   has_lick:
     description: Defines whether a lick occurred in the site.
     data_type: boolean
