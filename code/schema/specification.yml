@@ -20,7 +20,7 @@ events:
     description: The length of the site.
     unit: centimeter
     data_type: number
-  site_id:
+  site_label:
     description: Label of the site
     implementation_details: Uses https://allenneuraldynamics.github.io/Aind.Behavior.VrForaging/api.task_logic.html#aind_behavior_vr_foraging.task_logic.VirtualSiteLabels
     data_type: string
