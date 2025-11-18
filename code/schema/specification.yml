@@ -1,0 +1,120 @@
+# yaml-language-server: $schema=./schema.json
+
+date: "2025-11-06"
+events:
+  start_time:
+    description: Start time, in software, for this site.
+    data_type: number
+    implementation_details: Low-precision timestamp
+    unit: second
+  stop_time:
+    description: Stop time, in software, for this site.
+    data_type: number
+    implementation_details: Low-precision timestamp
+    unit: second
+  start_position:
+    description: Start coordinate for this site in the VR environment
+    data_type: number
+    unit: centimeter
+  length:
+    description: The length of the site.
+    unit: centimeter
+    data_type: number
+  site_label:
+    description: Label of the site
+    implementation_details: Uses https://allenneuraldynamics.github.io/Aind.Behavior.VrForaging/api.task_logic.html#aind_behavior_vr_foraging.task_logic.VirtualSiteLabels
+    data_type: string
+  friction:
+    description: Assigned friction for the site.
+    unit: percentage
+    data_type: number
+  patch_label:
+    description: Patch type name
+    data_type: string
+    implementation_details: Uses (https://allenneuraldynamics.github.io/Aind.Behavior.VrForaging/api.task_logic.html#aind_behavior_vr_foraging.task_logic.Patch.label)
+  odor_label:
+    description: Odor molecule assigned to patch
+    data_type: string
+    implementation_details: (#TODO Not clear where this should be coming from) Not even sure if this should be here at all....
+  odor_concentration:
+    description: An array of representing the concentration levels of each odor channels. Channels are expected to be sorted by channel number. (i.e. [ch0, ch1, ch2])
+    data_type: array
+    unit: percentage
+  patch_index:
+    description: Patch number within the session
+    data_type: integer
+  patch_in_block_index:
+    description: Patch number within the block
+    data_type: integer
+  site_index:
+    description: Site number within the session
+    data_type: integer
+  site_in_block_index:
+    description: Site number within the block
+    data_type: integer
+  site_in_patch_index:
+    description: Site number within the patch
+    data_type: integer
+  site_by_type_in_patch_index:
+    description: Same as site_in_patch_index but only counting sites of the same type (e.g. RewardSite)
+    data_type: integer
+  odor_onset_time:
+    description: Time of odor onset. Will be null if no odor was delivered.
+    data_type: number
+    is_nullable: true
+    unit: second
+  odor_offset_time:
+    description: Time of odor offset. Will be null if no odor was delivered.
+    data_type: number
+    unit: second
+    is_nullable: true
+  reward_onset_time:
+    description: Time when reward was delivered
+    data_type: number
+    is_nullable: true
+    unit: second
+  reward_amount:
+    description: Amount of reward delivered
+    data_type: number
+    is_nullable: true
+    unit: milliliter
+  reward_probability:
+    description: Reward probability at the time of the reward delivery. Will be null if the reward is not sampled (e.g. no has_choice is False)
+    data_type: number
+    is_nullable: true
+    unit: percentage
+    implementation_details: Should use the `PatchStateAtReward` SoftwareEvent. Otherwise (older datasets), it should use the closest `PatchState`
+  reward_available:
+    description: Reward left at the time of reward delivery. Will be null if the reward is not sampled (e.g. no has_choice is False)
+    data_type: number
+    is_nullable: true
+    unit: milliliter
+    implementation_details: Should use the `PatchStateAtReward` SoftwareEvent. Otherwise (older datasets), it should use the closest `PatchState`
+  has_reward:
+    description: Boolean whether reward was delivered, bool.
+    data_type: boolean
+    is_nullable: true
+  choice_cue_time:
+    description: Time when choice cue was delivered. Also can be considered the stop cue. The choice tone is delivered when a stop is successful.
+    data_type: number
+    is_nullable: true
+    unit: second
+  has_choice:
+    description: Defines whether a choice occurred in the site.
+    data_type: boolean
+    is_nullable: true
+  has_lick:
+    description: Defines whether a lick occurred in the site.
+    data_type: boolean
+  reward_delay_duration:
+    description: reward_onset_time - choice_cue_time
+    data_type: number
+    is_nullable: true
+    unit: second
+  has_waited_reward_delay:
+    description: Boolean whether the mouse successfully waited through the reward delay to get the reward. Will be null if has_choice is false.
+    data_type: boolean
+    is_nullable: true
+  block_index:
+    description: Block number within the session
+    data_type: integer
