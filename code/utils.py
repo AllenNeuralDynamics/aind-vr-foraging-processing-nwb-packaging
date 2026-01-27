@@ -1,307 +1,144 @@
 import json
-import logging
-from typing import Any
-
-import numpy as np
 import pandas as pd
-import pynwb
-from packaging.version import Version
-from scipy.signal import filtfilt, firwin
+from pynwb import NWBFile
 
-logger = logging.getLogger(__name__)
+from parse_raw_data import MetricsVrForaging
 
-
-def normalize_to_json_string(x: Any) -> str:
-    """
-    Normalizes input to a JSON-compatible string for NWB.
-
-    Parameters
-    ----------
-    x : Any
-        The input to normalize.
-        Can be a dict, string, None, or other JSON-serializable types.
-
-    Returns
-    -------
-    str
-        A JSON-formatted string representing the input.
-    """
-    if isinstance(x, dict):
-        return json.dumps(x)  # serialize dict (handles nesting)
-    elif isinstance(x, str):
-        try:
-            json.loads(x)  # check if valid JSON string
-            return x  # already a valid JSON string
-        except json.JSONDecodeError:
-            # Not a valid JSON string, re-encode
-            return json.dumps(x)
-    elif x is None:
-        return "null"
-    else:
-        # fallback: try to serialize other types
-        return json.dumps(x)
+import pandas as pd
+from typing import Literal
 
 
-# ported from Tiffany's processing code
-def get_breathing_from_sniff_detector(nwb: pynwb.NWBFile) -> np.ndarray:
-    """
-    Gets the breating from the sniff detector raw data
-
-    Parameters
-    ----------
-    nwb: pynwb.NWBFile
-        The nwb with the raw data
-
-    Returns
-    -------
-    np.ndarray
-        The result array with the breathing data
-    """
-    if "Behavior.HarpSniffDetector.RawVoltage" in nwb.acquisition.keys():
-        return nwb.acquisition["Behavior.HarpSniffDetector.RawVoltage"][:][
-            "RawVoltage"
-        ].to_numpy()
-
-    else:
-        return nwb.acquisition["Behavior.HarpBehavior.AnalogData"][:][
-            "AnalogInput0"
-        ].to_numpy()
-
-
-# ported from Tiffany's processing code
-def fir_filter(
-    data: pd.DataFrame,
-    col: str,
-    cutoff_hz: float,
-    num_taps=61,
-    nyq_rate=1000 / 2.0,
+def extract_site_entry_exit(
+    df: pd.DataFrame,
+    site_col: str = "label",
+    stop_col: str = "stop_time",
 ) -> pd.DataFrame:
     """
-    Create a FIR filter and apply it to signal.
+    Extract site entry and exit events
 
     Parameters
     ----------
-    data: pd.DataFrame
-        Input data to apply filter to
+    df : pd.DataFrame
+        DataFrame indexed by start time, with stop_time and site columns.
+        Site index should be NaN when not at a site.
+    site_col : str
+        Column name for site indices.
+    stop_col : str
+        Column name for stop time.
+    
+    Returns
+    -------
+    pd.DataFrame
+        Event table with columns:
+        - timestamp
+        - site
+        - event ('site_entry' or 'site_exit')
+    """
 
-    col: str
-        The column to be added to the result
+    events = []
 
-    cutoff_hz: float
-        The cuttoff frequency of the filter
+    for start_time, row in df.iterrows():
+        site = row[site_col]
+        stop_time = row[stop_col]
 
-    numtaps: int, default = 61
-        Length of the filter (number of coefficients, the filter order + 1)
-        Default to 61
+        if pd.isna(site) or pd.isna(stop_time):
+            continue
 
-    nyq_rate: float
-        The Nyquist rate of the signal.
-        default = 500
+        # Entry event at start_time
+        events.append({
+            "timestamp": start_time,
+            "site": site,
+            "event": "site entry"
+        })
+
+        # Exit event at stop_time
+        events.append({
+            "timestamp": stop_time,
+            "site": site,
+            "event": "site exit"
+        })
+
+    event_table = pd.DataFrame(events)
+    event_table = event_table.sort_values("timestamp").reset_index(drop=True)
+    return event_table
+
+def extract_patch_entry_exit(df, patch_label_col="patch_label", patch_onset_col="patch_onset"):
+    """
+    Extract patch entry and exit events from a state table.
+
+    Assumes:
+    - index is start_time
+    - patch_label is the current patch
+    - patch_onset is the start time of that patch visit (constant within patch)
+
+    Returns:
+    - event table with patch_entry and patch_exit events
+    """
+    df = df.copy()
+
+    # Identify when the patch changes (or starts/ends)
+    df["prev_patch"] = df[patch_label_col].shift(1)
+    df["prev_onset"] = df[patch_onset_col].shift(1)
+
+    events = []
+
+    for ts, row in df.iterrows():
+        patch = row[patch_label_col]
+        onset = row[patch_onset_col]
+        prev_patch = row["prev_patch"]
+        prev_onset = row["prev_onset"]
+
+        # Patch entry (first time we see a patch)
+        if pd.isna(prev_patch) and pd.notna(patch):
+            events.append({"timestamp": ts, "patch": patch, "event": "patch entry"})
+
+        # Patch exit (patch disappears)
+        elif pd.notna(prev_patch) and pd.isna(patch):
+            events.append({"timestamp": ts, "patch": prev_patch, "event": "patch exit"})
+
+        # Patch switch (exit previous + entry new)
+        elif pd.notna(prev_patch) and pd.notna(patch) and patch != prev_patch:
+            events.append({"timestamp": ts, "patch": prev_patch, "event": "patch exit"})
+            events.append({"timestamp": ts, "patch": patch, "event": "patch entry"})
+
+    return pd.DataFrame(events).sort_values("timestamp").reset_index(drop=True)
+
+import pandas as pd
+
+def extract_reward_events(df,
+                           is_reward_col="is_reward",
+                           reward_time_col="reward_onset_time"):
+    """
+    Extract reward delivery events from a snapshot/state table.
+
+    Assumes:
+    - index is time (start_time)
+    - rows with is_reward == True correspond to reward events
+    - reward_onset_time gives the precise event time when available
 
     Returns
     -------
     pd.DataFrame
-        The result dataframe with the filter applied
+        columns: timestamp, event
     """
+    events = []
 
-    # Use firwin to create a lowpass FIR filter
-    fir_coeff = firwin(num_taps, cutoff_hz / nyq_rate)
+    for ts, row in df.iterrows():
+        if row.get(is_reward_col) is True:
+            reward_time = row.get(reward_time_col)
 
-    # Use lfilter to filter the signal with the FIR filter
-    data["filtered_" + col] = filtfilt(fir_coeff, 1.0, data[col].values)
+            # Use reward_onset_time if available, otherwise fallback to index
+            event_time = reward_time if pd.notna(reward_time) else ts
 
-    return data
+            events.append({
+                "timestamp": event_time,
+                "event": "reward"
+            })
 
-
-# ported from Tiffany's processing code
-def get_processed_encoder(
-    nwb: pynwb.NWBFile, parser: str = "filter"
-) -> pd.DataFrame:
-    """
-    Processes the raw encoder data to return filtered velocity
-
-    Parameters
-    ----------
-    nwb: pynwb.NWBFile
-        The raw nwb to pull the encoder data
-
-    parser: str, default = "filter"
-        Either apply a FIR filter or resample
-
-    Returns
-    -------
-    pd.DataFrame
-        The processed velocity from the encoder data
-    """
-    rig = json.loads(nwb.acquisition["Behavior.InputSchemas.Rig"].description)
-    current_version = Version(rig["version"])
-
-    # Load data from encoder efficiently
-    if current_version >= Version("0.4.0"):
-        sensor_data = nwb.acquisition["Behavior.HarpTreadmill.SensorData"][:]
-
-        wheel_size = rig["harp_treadmill"]["calibration"]["output"][
-            "wheel_diameter"
-        ]
-        pulses_per_revolution = rig["harp_treadmill"]["calibration"]["output"][
-            "pulses_per_revolution"
-        ]
-        invert_direction = rig["harp_treadmill"]["calibration"]["output"][
-            "invert_direction"
-        ]
-
-        converter = (
-            wheel_size
-            * np.pi
-            / pulses_per_revolution
-            * (-1 if invert_direction else 1)
-        )
-        sensor_data["Encoder"] = sensor_data.Encoder.diff()
-        dispatch = 250
-
-    elif current_version >= Version("0.3.0") and current_version < Version(
-        "0.4.0"
-    ):
-        sensor_data = nwb.acquisition["Behavior.HarpTreadmill.SensorData"][:]
-
-        wheel_size = rig["harp_treadmill"]["calibration"]["wheel_diameter"]
-        pulses_per_revolution = rig["harp_treadmill"]["calibration"][
-            "pulses_per_revolution"
-        ]
-        invert_direction = rig["harp_treadmill"]["calibration"][
-            "invert_direction"
-        ]
-
-        sensor_data["Encoder"] = sensor_data.Encoder.diff()
-        dispatch = 250
-
-    else:
-        sensor_data = nwb.acquisition["Behavior.HarpBehavior.AnalogData"][:]
-        if "settings" in rig["treadmill"].keys():
-            wheel_size = rig["treadmill"]["settings"]["wheel_diameter"]
-            pulses_per_revolution = rig["treadmill"]["settings"][
-                "pulses_per_revolution"
-            ]
-            invert_direction = rig["treadmill"]["settings"]["invert_direction"]
-        else:
-            if "wheel_diameter" in rig["treadmill"].keys():
-                wheel_diameter = "wheel_diameter"
-                pulses = "pulses_per_revolution"
-                invert = "invert_direction"
-            else:
-                wheel_diameter = "wheelDiameter"
-                pulses = "pulsesPerRevolution"
-                invert = "invertDirection"
-
-            wheel_size = rig["treadmill"][wheel_diameter]
-            pulses_per_revolution = rig["treadmill"][pulses]
-            invert_direction = rig["treadmill"][invert]
-
-        dispatch = 1000
-
-    converter = (
-        wheel_size
-        * np.pi
-        / pulses_per_revolution
-        * (-1 if invert_direction else 1)
-    )
-    if parser == "filter":
-        sensor_data["velocity"] = (
-            sensor_data["Encoder"] * converter
-        ) * dispatch  # To be replaced by dispatch rate whe it works
-        sensor_data["distance"] = sensor_data["Encoder"] * converter
-        sensor_data = fir_filter(sensor_data, "velocity", 50)
-        encoder = sensor_data[["filtered_velocity"]]
-
-    elif parser == "resampling":
-        encoder = sensor_data[["Time", "Encoder"]]
-        encoder["Encoder"] = encoder.apply(lambda x: x * converter)
-        encoder["Time"] = pd.to_datetime(encoder["Time"], unit="s")
-        encoder["Encoder"] = (
-            encoder["Encoder"]
-            .resample("33ms")
-            .sum()
-            .interpolate(method="linear")
-            / 0.033
-        )
-        encoder["Time"] = encoder["Time"] - pd.to_datetime(0)
-        encoder["Time"] = encoder["Time"].total_seconds()
-        encoder = encoder.to_frame()
-        encoder.rename(columns={"Encoder": "filtered_velocity"}, inplace=True)
-
-    encoder_data = encoder
-
-    return encoder_data
+    return pd.DataFrame(events).sort_values("timestamp").reset_index(drop=True)
 
 
-def get_event_timeseries_classifications(
-    device_mapping: dict[str, list[str]], nwb: pynwb.NWBFile
-) -> dict[str, list[tuple[str, bool]]]:
-    """
-    Returns the classification of the register
-    from the device provided in the mapping
-
-    Parameters
-    ----------
-    device_mapping: dict[str, list[str]]
-        The mapping of harp device to
-        active registers that need to be classified
-
-    Returns
-    -------
-    dict[str, list[tuple[str, bool]]]
-        Dictionary where key is device and value is tuple with register.
-        True for event-like, False for continuous-like
-    """
-
-    register_event_timseries_classification = {}
-
-    for device, contents in device_mapping.items():
-        registers = contents[0]
-        name = contents[1]
-        description = contents[2]
-        is_event = contents[3]
-
-        for register in registers:
-            if device not in nwb.acquisition.keys():
-                logger.warning(
-                    f"No {device} found in acquisition field of nwb."
-                )
-                continue
-
-            if device in register_event_timseries_classification:
-                register_event_timseries_classification[device].append(
-                    (register, is_event, name, description)
-                )
-            else:
-                register_event_timseries_classification[device] = [
-                    (register, is_event, name, description)
-                ]
-
-    return register_event_timseries_classification
 
 
-def is_event(times: np.ndarray, threshold: float = 1) -> bool:
-    """
-    Classifies where the timestamps are event/discrete or continuous-like.
-    Takes mean of diff of times and checks against threshold.
+    
 
-    Parameters
-    ----------
-    times: np.ndarray
-        Array of timestamps to classify
-
-    threshold: float, default = 1
-        The value to compare the mean of the diff of times
-
-    Returns
-    -------
-    bool: True if event-like, False if continuous-like
-    """
-    if times.shape[0] < 3:
-        return True, 0
-
-    deltas = np.diff(times)
-    mean_delta = np.mean(deltas)
-
-    return bool(mean_delta > threshold)
