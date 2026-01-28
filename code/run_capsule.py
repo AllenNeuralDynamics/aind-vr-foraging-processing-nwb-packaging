@@ -10,9 +10,10 @@ from hdmf_zarr import NWBZarrIO
 from ndx_events import EventsTable, MeaningsTable
 from pydantic import Field
 from pydantic_settings import BaseSettings
-from pynwb.base import ProcessingModule, TimeSeries
+from pynwb.base import DynamicTable, ProcessingModule, TimeSeries
 
-import utils_refactored
+import utils
+import parse_raw_data
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +50,33 @@ if __name__ == "__main__":
     nwb = source_io.read()
 
     start_process_time = datetime.now()
-    metrics_from_nwb = utils_refactored.MetricsVrForaging(nwb)
+    metrics_from_nwb = parse_raw_data.MetricsVrForaging(nwb)
+    odor_events = utils.extract_odor_events(metrics_from_nwb.stream_data.odor_triggers)
+    site_events = utils.extract_site_entry_exit(metrics_from_nwb.active_site_add)
+    patch_events = utils.extract_patch_entry_exit(metrics_from_nwb.active_site_add)
+    cue_events = utils.extract_binary_events(metrics_from_nwb.active_site_add, "is_choice", "choice_cue_time", "Cue")
+    reward_events = utils.extract_binary_events(metrics_from_nwb.active_site_add, "is_reward", "reward_onset_time", "reward")
+    lick_events = utils.extract_lick_events(metrics_from_nwb.stream_data.lick_onset)
+
+    event_table_df = utils.merge_event_tables(
+        [
+            odor_events, site_events, patch_events, cue_events, reward_events, lick_events
+        ]
+    )
+    trial_table_df = utils.construct_trials_table(metrics_from_nwb)
+
+    event_table = EventsTable.from_dataframe(
+        event_table_df,
+        name="events",
+        table_description="Events for VR Foraging task",
+    )
+    nwb.trials.from_dataframe(
+        
+    )
+
+    nwb.add_events_table(event_table)
+
+
     end_process_time = datetime.now()
     data_process = DataProcess(
         name="Other",

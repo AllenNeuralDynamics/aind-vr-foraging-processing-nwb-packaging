@@ -608,8 +608,123 @@ class RewardFunctionsNWB:
 
         return self.reward_sites
 
+def odor_data_harp_olfactometer(data: dict, schema_properties: TaskSchemaPropertiesNWB):
+    """
+    Process odor data from the Harp Olfactometer.
+
+    Args:
+        data (dict): A dictionary containing the data from the Harp Olfactometer.
+        reward_sites (DataFrame): A DataFrame containing reward site information.
+
+    Returns:
+        DataFrame: A DataFrame containing the updated reward site information with odor onset and offset.
+
+    Raises:
+        AssertionError: If the odor labels do not match.
+
+    """
+
+    # Selecting which odor valve is open before the end valves are opened
+    OdorValveState = pd.DataFrame()
+    OdorValveState["time"] = data["HarpOlfactometer"]["OdorValveState"].index.values
+    data["HarpOlfactometer"]["OdorValveState"]["Valve0"] = np.where(
+        data["HarpOlfactometer"]["OdorValveState"]["Valve0"] == True,
+        "0",
+        False,
+    )
+    data["HarpOlfactometer"]["OdorValveState"]["Valve1"] = np.where(
+        data["HarpOlfactometer"]["OdorValveState"]["Valve1"] == True,
+        "1",
+        False,
+    )
+    data["HarpOlfactometer"]["OdorValveState"]["Valve2"] = np.where(
+        data["HarpOlfactometer"]["OdorValveState"]["Valve2"] == True,
+        "2",
+        False,
+    )
+
+    # Create a new dataframe to store the results
+    OdorValveState = pd.DataFrame(columns=["time", "condition"])
+
+    # Loop through each row and find the values that are not False
+    for index, row in data["HarpOlfactometer"]["OdorValveState"][["Valve0", "Valve1", "Valve2"]].iterrows():
+        non_false_values = row[row != "False"].tolist()
+        if non_false_values:  # Check if there are any non-False values
+            OdorValveState = pd.concat(
+                [
+                    OdorValveState,
+                    pd.DataFrame([[index, non_false_values[0]]], columns=["time", "condition"]),
+                ]
+            )
+
+    EndValveState = pd.DataFrame()
+    EndValve = data["HarpOlfactometer"]["EndValveState"]
+    EndValve = EndValve[EndValve["MessageType"] == "WRITE"]
+    EndValveState["time"] = EndValve.index.values
+    EndValveState["condition"] = np.where(
+        EndValve["EndValve0"] == True,
+        "EndValveOn",
+        "EndValveOff",
+    )
+
+    odor_updates = pd.concat([EndValveState[["time", "condition"]], OdorValveState[["time", "condition"]]])
+    odor_updates = odor_updates.sort_values(by="time")
+    odor_updates = odor_updates[odor_updates["condition"] != False]
+
+    odor_triggers = pd.DataFrame(columns=["odor_onset", "odor_offset", "patch_type"])
+    onset = np.nan
+    offset = np.nan
+    opened = np.nan
+    condition = "EndValveOff"
+    for i, row in odor_updates.iterrows():
+        if (row["condition"] != "EndValveOn") and (row["condition"] != "EndValveOff"):
+            condition = row["condition"]
+            opened = True
+
+        elif row["condition"] == "EndValveOn":
+            onset = row["time"]
+            opened = True
+
+        elif row["condition"] == "EndValveOff" and opened:
+            offset = row["time"]
+            opened = False
+
+        if opened == False:
+            new_row = {
+                "odor_onset": onset,
+                "odor_offset": offset,
+                "patch_type": condition,
+            }
+            odor_triggers.loc[len(odor_triggers)] = new_row
+            condition = row["condition"]
+
+    if row["condition"] == "EndValveOn":
+        new_row = {"odor_onset": onset, "odor_offset": np.nan, "patch_type": condition}
+        odor_triggers.loc[len(odor_triggers)] = new_row
+
+    # Assign odor labels to odor indexes
+    odor0 = False
+    odor1 = False
+    odor2 = False
+
+    for patches in schema_properties.patches:
+        if patches[schema_properties.odor_specifications][schema_properties.odor_index] == 0:
+            odor0 = patches["label"]
+        elif patches[schema_properties.odor_specifications][schema_properties.odor_index] == 1:
+            odor1 = patches["label"]
+        else:
+            odor2 = patches["label"]
+
+    odor_triggers["patch_type"] = np.where(odor_triggers["patch_type"] == "0", odor0, odor_triggers["patch_type"])
+    odor_triggers["patch_type"] = np.where(odor_triggers["patch_type"] == "1", odor1, odor_triggers["patch_type"])
+    odor_triggers["patch_type"] = np.where(odor_triggers["patch_type"] == "2", odor2, odor_triggers["patch_type"])
+
+    # return reward_sites  ## ------------------------------------------------------------------------- ##
+    return odor_triggers
+
+
 class ContinuousDataNWB:
-    def __init__(self, data, load_continuous: bool = True):
+    def __init__(self, data, schema_properties: TaskSchemaPropertiesNWB = None, load_continuous: bool = True):
 
         self.data = data.copy()
 
@@ -632,7 +747,7 @@ class ContinuousDataNWB:
             self.give_reward, self.pulse_duration = self.water_valve_loading()
             self.sniff_data_loading()
             self.position_loading()
-            # self.odor_triggers = odor_data_harp_olfactometer(self.data)
+            self.odor_triggers = odor_data_harp_olfactometer(self.data, schema_properties)
 
     def position_loading(self):
         position = self.data['OperationControl']['CurrentPosition']
@@ -779,12 +894,11 @@ class MetricsVrForaging:
         self.active_site = parse_dataframe_NWB(self.data)
         self.active_site_add = AddExtraColumnsNWB(self.active_site).all_epochs
         self.active_site['patch_label'] = self.active_site['patch_label'].apply(get_condition_code)
-        
-        self.stream_data = ContinuousDataNWB(self.data)
+        self.schemas = TaskSchemaPropertiesNWB(self.data)
+        self.stream_data = ContinuousDataNWB(self.data, schema_properties=self.schemas)
         self.reward_sites = self.active_site.loc[self.active_site['label'] == 'OdorSite']
         
         self.df = self.retrieve_metrics()
-        self.schemas = TaskSchemaPropertiesNWB(self.data)
         self.mouse = self.schemas.mouse
         self.session = self.schemas.session
         self.rig_name = self.schemas.rig_name
