@@ -4,6 +4,7 @@ from pynwb import NWBFile
 
 from parse_raw_data import MetricsVrForaging
 
+import numpy as np
 import pandas as pd
 from typing import Literal
 
@@ -305,26 +306,29 @@ def construct_trials_table(metrics_from_raw: MetricsVrForaging) -> pd.DataFrame:
     trials_table = pd.DataFrame()
 
     trials_table["start_time"] = metrics_df.index.values
-    trials_table["stop_time"] = metrics_df["stop_time"]
-    trials_table["start_position"] = metrics_df["start_position"]
-    trials_table["length"] = metrics_df["length"]
-    trials_table["site_label"] = metrics_df["label"]
-    trials_table["friction"] = metrics_df["friction"]
-    trials_table["patch_label"] = metrics_df["patch_label"]
-    trials_table["odor_label"] = metrics_df["odor_label"]
+    trials_table["stop_time"] = metrics_df["stop_time"].values
+    trials_table["start_position"] = metrics_df["start_position"].values
+    trials_table["length"] = metrics_df["length"].values
+    trials_table["site_label"] = metrics_df["label"].values
+    trials_table["friction"] = metrics_df["friction"].values
+    trials_table["patch_label"] = metrics_df["patch_label"].values
+    trials_table["odor_label"] = metrics_df["odor_label"].values
    
     trials_table = add_odor_times_to_trials(trials_table, metrics_from_raw.stream_data.odor_triggers)
-    trials_table["reward_onset_time"] = metrics_df["reward_onset_time"]
-    trials_table["reward_amount"] = metrics_df["reward_amount"]
-    trials_table["reward_probability"] = metrics_df["reward_probability"]
-    trials_table["reward_available"] = metrics_df["reward_available"]
-    trials_table["has_reward"] = metrics_df["is_reward"]
-    trials_table["choice_cue_time"] = metrics_df["choice_cue_time"]
-    trials_table["has_choice"] = metrics_df["is_choice"]
+    trials_table["reward_onset_time"] = metrics_df["reward_onset_time"].values
+    trials_table["reward_amount"] = metrics_df["reward_amount"].values
+    trials_table["reward_probability"] = metrics_df["reward_probability"].values
+    trials_table["reward_available"] = metrics_df["reward_available"].values
+    trials_table["has_reward"] = metrics_df["is_reward"].values
+    trials_table["choice_cue_time"] = metrics_df["choice_cue_time"].values
+    trials_table["has_choice"] = metrics_df["is_choice"].values
 
-    trials_table["has_lick"] = add_lick_flag_to_trials(trials_table, metrics_from_raw.stream_data.lick_onset)
-    trials_table["reward_delay_duration"] = trials_table["reward_onset_time"] - trials_table["choice_cue_time"]
-    trials_table["has_waited_reward_delay"] = metrics_df["succesful_wait_time"]
+    trials_table = add_lick_flag_to_trials(trials_table, metrics_from_raw.stream_data.lick_onset)
+    trials_table["reward_delay_duration"] = (trials_table["reward_onset_time"] - trials_table["choice_cue_time"]).values
+    # Start with boolean for successful wait
+    success_bool = metrics_df["succesful_wait_time"].notnull().reset_index()
+    # Set trials with no choice to NaN
+    trials_table["has_waited_reward_delay"] = success_bool["succesful_wait_time"].where(trials_table["has_choice"], np.nan).values
 
     return trials_table
 
