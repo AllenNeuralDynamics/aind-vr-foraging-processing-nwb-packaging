@@ -5,7 +5,9 @@ from pathlib import Path
 
 import pandas as pd
 import scipy
-from aind_data_schema.core.processing import DataProcess
+from aind_data_schema.components.identifiers import Code
+from aind_data_schema.core.processing import DataProcess, ProcessStage
+from aind_data_schema_models.process_names import ProcessName
 from hdmf_zarr import NWBZarrIO
 from ndx_events import EventsTable, MeaningsTable
 from pydantic import Field
@@ -17,6 +19,8 @@ import parse_raw_data
 
 logger = logging.getLogger(__name__)
 
+GITHUB_URL = "https://github.com/AllenNeuralDynamics/aind-vr-foraging-processing-nwb-packaging"
+VERSION = "4"
 
 class VRForagingSettings(BaseSettings, cli_parse_args=True):
     """
@@ -81,5 +85,17 @@ if __name__ == "__main__":
         io.export(src_io=source_io, nwbfile=nwb)
     logger.info("Successfully wrote processed NWB")
 
+    end_process_time = datetime.now()
+    data_process = DataProcess(
+        start_date_time=start_process_time,
+        end_date_time=end_process_time,
+        stage=ProcessStage.PROCESSING,
+        name=ProcessName.PIPELINE,
+        experimenters=["Arjun Sridhar"],
+        code=Code(
+            url=GITHUB_URL,
+            version=VERSION
+        )
+    )
     with open(settings.output_directory / "data_process.json", "w") as f:
         f.write(data_process.model_dump_json(indent=4))
